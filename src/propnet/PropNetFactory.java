@@ -14,6 +14,7 @@ import rekkura.state.algorithm.Topper;
 import rekkura.util.Cartesian;
 import rekkura.util.Colut;
 
+import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -59,37 +60,42 @@ public class PropNetFactory {
      * @param net
      * @return
      */
-    public static Node getNodeForProp(Dob ground, Map<Dob,Node> props, Set<Node> net) {
-
-        // props are always ands
-        Node node = props.containsKey(ground) ? props.get(ground) :
-                Node.NodeFactory.makeOr();
-
-        props.put(ground, node);
-        net.add(node);
-        return node;
+    public static Node getNodeForProp(Dob ground, Map<Dob,Node> props, Set<Node> bottom, Set<Node> net) {
+        boolean exists = props.containsKey(ground);
+        if (!exists) {
+            Node node = Node.NodeFactory.makeOr();
+            bottom.add(node);
+            net.add(node);
+            props.put(ground, node);
+        }
+        return props.get(ground);
     }
 
-    public static Node createAndAddAND(List<Node> inputs, Set<Node> net) {
-        Node ret = Node.NodeFactory.makeAnd(inputs, Lists.<Node>newArrayList());
+    public static Node createAndAddAND(List<Node> inputs, Set<Node> bottom, Set<Node> net) {
+        Node ret = Node.NodeFactory.makeAnd(inputs);
+        bottom.removeAll(inputs);
         net.add(ret);
         return ret;
     }
 
-    public static Node createAndAddNOT(List<Node> inputs, Set<Node> net) {
-        Node ret = Node.NodeFactory.makeNot(inputs, Lists.<Node>newArrayList());
+    public static Node createAndAddNOT(List<Node> inputs, Set<Node> bottom, Set<Node> net) {
+        Node ret = Node.NodeFactory.makeNot(inputs);
+        bottom.removeAll(inputs);
         net.add(ret);
         return ret;
     }
 
-    public static Node createAndAddOR(List<Node> inputs, Set<Node> net) {
-        Node ret = Node.NodeFactory.makeOr(inputs, Lists.<Node>newArrayList());
+    public static Node createAndAddOR(List<Node> inputs, Set<Node> bottom, Set<Node> net) {
+        Node ret = Node.NodeFactory.makeOr(inputs);
+        bottom.removeAll(inputs);
         net.add(ret);
         return ret;
     }
 
-    public static void processAllNegativeBody(Rule rule, Cachet cachet, Map<Dob, Node> props, Set<Node> net) {
-        processAllNegativeBody(rule.head, rule.body, cachet, props, net);
+    public static void processAllNegativeBody(Rule rule, Cachet cachet,
+                                              Map<Dob, Node> props, Set<Node> bottom,
+                                              Set<Node> net) {
+        processAllNegativeBody(rule.head, rule.body, cachet, props, bottom, net);
     }
 
     public static void negBodyRulePrecon(Atom head, ImmutableList<Atom> body, Cachet cachet) {
@@ -107,33 +113,64 @@ public class PropNetFactory {
         }
     }
 
+    public static void attachInput(Node node, Node input, Set<Node> bottom) {
+        node.inputs.add(input);
+        bottom.remove(input);
+    }
+
+    public static Set<Node> trueBottom(Set<Node> net) {
+        Set<Node> truth = Sets.newHashSet();
+        for (Node a : net) {
+            boolean bot = true;
+            for (Node b : net)
+                if (b.inputs.contains(a))
+                    bot = false;
+            if (bot)
+                truth.add(a);
+        }
+        return truth;
+    }
+
+    public static boolean validateBottom(Set<Node> bottom, Set<Node> net) {
+        Set<Node> truth = trueBottom(net);
+        System.out.println("[TRUTH] " + truth.size());
+
+        return truth.equals(bottom);
+    }
+
     public static void processAllNegativeBody(Atom head, ImmutableList<Atom> body,
-                                              Cachet cachet, Map<Dob, Node> props, Set<Node> net) {
+                                              Cachet cachet,
+                                              Map<Dob, Node> props,
+                                              Set<Node> bottom,
+                                              Set<Node> net) {
         negBodyRulePrecon(head, body, cachet);
 
         List<Node> negPropNodes = Lists.newArrayList();
         for (Atom bodyTerm : body)
-            negPropNodes.add(getNodeForProp(bodyTerm.dob, props, net));
+            negPropNodes.add(getNodeForProp(bodyTerm.dob, props, bottom, net));
 
-        Node orNode = createAndAddOR(negPropNodes, net);
-        Node notNode = createAndAddNOT(Lists.newArrayList(orNode), net);
-        Node headNode = getNodeForProp(head.dob, props, net);
-        headNode.inputs.add(notNode);
+        Node orNode = createAndAddOR(negPropNodes, bottom, net);
+        Node notNode = createAndAddNOT(Lists.newArrayList(orNode), bottom, net);
+        Node headNode = getNodeForProp(head.dob, props, bottom, net);
+        attachInput(headNode, notNode, bottom);
     }
 
-    public static void processPositiveBodyGrounding(List<Dob> posBodyGrounding, Rule rule, Pool pool,
-                                                    Map<Dob, Node> props, Set<Node> net) {
+    public static void processPositiveBodyGrounding(List<Dob> posBodyGrounding,
+                                                    Rule rule, Pool pool,
+                                                    Map<Dob, Node> props,
+                                                    Set<Node> bottom,
+                                                    Set<Node> net) {
         // generate head grounding
         Dob headGrounding = Terra.applyBodies(rule, posBodyGrounding, Sets.<Dob>newHashSet(), pool);
         if (headGrounding == null)
             return;
 
         // generate node for head grounding
-        Node headNode = getNodeForProp(headGrounding, props, net);
+        Node headNode = getNodeForProp(headGrounding, props, bottom, net);
 
         // generate a bigOR that's the sole input to headNode if not done already
         if (headNode.inputs.isEmpty())
-            headNode.inputs.add(Node.NodeFactory.makeOr());
+            attachInput(headNode, createAndAddOR(Lists.<Node>newArrayList(), bottom, net), bottom);
 
         Node bigOR = headNode.inputs.get(0);
 
@@ -157,30 +194,31 @@ public class PropNetFactory {
         List<Node> negNodes = Lists.newArrayList();
 
         for (Dob pos : posBodyGrounding)
-            posNodes.add(getNodeForProp(pos, props, net));
+            posNodes.add(getNodeForProp(pos, props, bottom, net));
 
         for (Dob neg : negBodyGroundings)
-            negNodes.add(getNodeForProp(neg, props, net));
+            negNodes.add(getNodeForProp(neg, props, bottom, net));
 
         // create AND for this set of body groundings
-        Node AND = createAndAddAND(posNodes, net);
+        Node AND = createAndAddAND(posNodes, bottom, net);
 
         // squash nots and add as inputs to the and
         if (negNodes.isEmpty() == false) {
-            Node negOR = createAndAddOR(negNodes, net);
-            Node negNOT = createAndAddNOT(Lists.<Node>newArrayList(negOR), net);
+            Node negOR = createAndAddOR(negNodes, bottom, net);
+            Node negNOT = createAndAddNOT(Lists.<Node>newArrayList(negOR), bottom, net);
 
             // add to posAND
-            AND.inputs.add(negNOT);
+            attachInput(AND, negNOT, bottom);
         }
 
         // add to bigOR inputs
-        bigOR.inputs.add(AND);
+        attachInput(bigOR, AND, bottom);
     }
 
     public static PropNet buildNet(Ruletta ruletta, Cachet cachet) {
         Map<Dob, Node> props = Maps.newHashMap(); // the nodes for the dobs will have to be set each turn
         Set<Node> net = Sets.newHashSet();
+        Set<Node> bottom = Sets.newHashSet(); // for constructing the topological order without having to do N^2
         Pool pool = ruletta.fortre.pool;
         List<Rule> rules = Topper.toList(ruletta.ruleOrder);
 
@@ -200,15 +238,30 @@ public class PropNetFactory {
             Iterable<List<Dob>> posBodyGroundings = Cartesian.asIterable(posBodySpace);
             int nPosBodyGroundings = 0;
             for (List<Dob> posBodyGrounding : posBodyGroundings) {
-                processPositiveBodyGrounding(posBodyGrounding, rule, pool, props, net);
+                processPositiveBodyGrounding(posBodyGrounding, rule, pool, props, bottom, net);
                 nPosBodyGroundings++;
             }
 
-            // rule with only negative grounded bodies
-            if (nPosBodyGroundings == 0 && !body.isEmpty())
-                processAllNegativeBody(head, body, cachet, props, net);
+            if (nPosBodyGroundings == 0) {
+                if (!body.isEmpty())
+                    // rule with only negative grounded bodies
+                    processAllNegativeBody(head, body, cachet, props, bottom, net);
+                else
+                    // base case
+                    getNodeForProp(head.dob, props, bottom, net);
+            }
         }
 
-        return new PropNet(props, net);
+        List<Node> revTop = Topper.toList(Topper.topSort(toMultimap(net), bottom));
+        List<Node> top = Lists.reverse(revTop);
+        Preconditions.checkArgument(top.size() == net.size());
+        return new PropNet(props, top);
+    }
+
+    public static ListMultimap<Node,Node> toMultimap(Set<Node> net) {
+        ListMultimap<Node,Node> ret = ArrayListMultimap.create();
+        for (Node node : net)
+            ret.putAll(node, node.inputs);
+        return ret;
     }
 }

@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import rekkura.logic.model.Dob;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
@@ -15,22 +16,14 @@ import java.util.Set;
  * To change this template use File | Settings | File Templates.
  */
 public class PropNet {
-    public Set<Node> net; // the actual net
+    public List<Node> tnet; // nodes in topological order
     public Map<Dob,Node> props;
     public Set<Dob> onBases; // bases cache
 
-    public PropNet(Map<Dob,Node> props, Set<Node> net) {
-        this.net = net;
+    public PropNet(Map<Dob,Node> props, List<Node> net) {
+        this.tnet = net;
         this.props = props;
     }
-
-    // Add maps for these:
-    // bases
-    // inputs
-    // legals
-    // goals
-    // terminals
-    // init
 
     public Map<Node,Dob> invProps() {
         Map<Node,Dob> ret = Maps.newHashMap();
@@ -42,10 +35,20 @@ public class PropNet {
         return ret;
     }
 
+    public void wipe() {
+        for (Node node : tnet)
+            node.val = false;
+    }
+
+    public void advance() {
+        for (Node node : tnet)
+            node.eval();
+    }
+
     // warning: big output
     @Override public String toString() {
         System.out.println("[SUMMARY] Number of props: " + props.keySet().size());
-        System.out.println("[SUMMARY] Number of nodes: " + net.size());
+        System.out.println("[SUMMARY] Number of nodes: " + tnet.size());
         String output = "";
         Map<Node, Dob> invProps = invProps();
 

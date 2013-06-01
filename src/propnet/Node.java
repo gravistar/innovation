@@ -20,10 +20,10 @@ public class Node {
     public ValFn<Node> fn;
 
     public Node (ValFn<Node> fn) {
-        this(Lists.<Node>newArrayList(), Lists.<Node>newArrayList(), fn);
+        this(Lists.<Node>newArrayList(), fn);
     }
 
-    public Node (List<Node> inputs, Collection<Node> outputs, ValFn<Node> fn) {
+    public Node (List<Node> inputs, ValFn<Node> fn) {
         this.inputs = inputs;
         this.fn = fn;
     }
@@ -33,20 +33,20 @@ public class Node {
     }
 
     public static class NodeFactory {
-        public static Node makeAnd(List<Node> inputs, List<Node> outputs) {
-            return new Node(inputs, outputs, NodeFns.AND);
+        public static Node makeAnd(List<Node> inputs) {
+            return new Node(inputs, NodeFns.AND);
         }
 
-        public static Node makeOr(List<Node> inputs, List<Node> outputs) {
-            return new Node(inputs, outputs, NodeFns.OR);
+        public static Node makeOr(List<Node> inputs) {
+            return new Node(inputs, NodeFns.OR);
         }
 
-        public static Node makeNot(List<Node> inputs, List<Node> outputs) {
-            return new Node(inputs, outputs, NodeFns.NOT);
+        public static Node makeNot(List<Node> inputs) {
+            return new Node(inputs, NodeFns.NOT);
         }
 
-        public static Node makeXor(List<Node> inputs, List<Node> outputs) {
-            return new Node(inputs, outputs, NodeFns.XOR);
+        public static Node makeXor(List<Node> inputs) {
+            return new Node(inputs, NodeFns.XOR);
         }
 
         public static Node makeAnd() {
@@ -64,6 +64,5 @@ public class Node {
         public static Node makeXor() {
             return new Node(NodeFns.XOR);
         }
-
     }
 }

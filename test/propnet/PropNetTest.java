@@ -72,17 +72,18 @@ public class PropNetTest {
         StratifiedProver prover = machine.prover;
         Pool pool = prover.pool;
 
-        // remove random rules
-        ruletta.allRules.removeAll(machine.queryRules);
-
         // get the initial grounds
         Set<Dob> initGrounds = prover.proveAll(Lists.<Dob>newArrayList());
+
+        System.out.println("[INIT GROUNDS] " + initGrounds);
 
         // convert inputs to does
         initGrounds = ProverStateMachine.submersiveReplace(initGrounds, context.INPUT_UNIFY, pool);
 
         // convert base to trues
         initGrounds = ProverStateMachine.submersiveReplace(initGrounds, context.BASE_UNIFY, pool);
+
+        System.out.println("[INIT GROUNDS AFTER UNIFIES] " + initGrounds);
 
         Cachet cachet = new Cachet(ruletta);
         cachet.storeAllGround(initGrounds);
