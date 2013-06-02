@@ -2,6 +2,7 @@ package propnet;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import rekkura.logic.model.Dob;
 
 import java.util.List;
@@ -18,7 +19,7 @@ import java.util.Set;
 public class PropNet {
     public List<Node> tnet; // nodes in topological order
     public Map<Dob,Node> props;
-    public Set<Dob> onBases; // bases cache
+    public Set<Dob> onBases = Sets.newHashSet(); // bases cache
 
     public PropNet(Map<Dob,Node> props, List<Node> net) {
         this.tnet = net;

@@ -92,12 +92,6 @@ public class PropNetFactory {
         return ret;
     }
 
-    public static void processAllNegativeBody(Rule rule, Cachet cachet,
-                                              Map<Dob, Node> props, Set<Node> bottom,
-                                              Set<Node> net) {
-        processAllNegativeBody(rule.head, rule.body, cachet, props, bottom, net);
-    }
-
     public static void negBodyRulePrecon(Atom head, ImmutableList<Atom> body, Cachet cachet) {
         // head is grounded
         Preconditions.checkArgument(cachet.unisuccess.containsKey(head.dob));
@@ -129,13 +123,6 @@ public class PropNetFactory {
                 truth.add(a);
         }
         return truth;
-    }
-
-    public static boolean validateBottom(Set<Node> bottom, Set<Node> net) {
-        Set<Node> truth = trueBottom(net);
-        System.out.println("[TRUTH] " + truth.size());
-
-        return truth.equals(bottom);
     }
 
     public static void processAllNegativeBody(Atom head, ImmutableList<Atom> body,

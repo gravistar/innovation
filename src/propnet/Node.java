@@ -28,8 +28,9 @@ public class Node {
         this.fn = fn;
     }
 
+    // | is because inputs may be empty and val already assigned true
     public boolean eval() {
-        return val = fn.eval(inputs);
+        return val |= fn.eval(inputs);
     }
 
     public static class NodeFactory {
