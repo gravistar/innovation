@@ -1,5 +1,6 @@
 package machina;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
 import propnet.Node;
 import propnet.PropNet;
@@ -160,10 +161,9 @@ public class PropNetStateMachine implements GgpStateMachine{
 
     @Override
     public Set<Dob> getInitial() {
-        // init bases
-        for (Dob initBase : initBases)
-            net.onBases.add(initBase);
-        return advance(Maps.<Dob,Dob>newHashMap());
+        net.onBases = initBases;
+        setTrues();
+        return extractState();
     }
 
     @Override
@@ -181,21 +181,30 @@ public class PropNetStateMachine implements GgpStateMachine{
         return ret;
     }
 
-    public Set<Dob> advance(Map<Dob,Dob> actions) {
+    public boolean checkTerminal() {
         net.wipe();
+        setTrues();
+        net.advance();
+        return net.props.get(context.TERMINAL).val;
+    }
+
+    public void setTrues() {
         // active latches
         for (Dob latch : alwaysTrue)
             net.props.get(latch).val = true;
         // turn on cached bases
         for (Dob base : net.onBases)
             net.props.get(base).val = true;
+    }
+
+    public Set<Dob> advance(Map<Dob,Dob> actions) {
+        net.wipe();
+        setTrues();
         net.onBases.clear();
         applyActions(actions);
         net.advance();
-        Set<Dob> ret = extractState();
-        //cache bases
         net.onBases = getOnBases();
-        return ret;
+        return extractState();
     }
 
     public Set<Dob> getOnBases() {
@@ -247,11 +256,25 @@ public class PropNetStateMachine implements GgpStateMachine{
 
     @Override
     public boolean isTerminal(Set<Dob> state) {
-        return net.props.get(context.TERMINAL).val;
+        return checkTerminal();
     }
 
     @Override
-    public Map<Dob, Integer> getGoals(Set<Dob> state) {
-        return context.extractGoals(state);
+    public Map<Dob,Integer> getGoals(Set<Dob> state) {
+        return extractGoals();
+    }
+
+    public Map<Dob, Integer> extractGoals() {
+        Map<Dob,Integer> ret = Maps.newHashMap();
+        for (Dob goal : goals) {
+            if (net.props.get(goal).val) {
+                Preconditions.checkArgument(goal.at(0) == context.GOAL);
+                Dob role = goal.at(1);
+                Dob value = goal.at(2);
+                Preconditions.checkArgument(!ret.containsKey(role));
+                ret.put(role, Integer.parseInt(value.name));
+            }
+        }
+        return ret;
     }
 }

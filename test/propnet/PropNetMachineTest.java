@@ -13,8 +13,10 @@ import rekkura.test.ggp.SimpleGames;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Random;
 import java.util.Set;
 
+import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
 /**
@@ -27,10 +29,17 @@ import static org.junit.Assert.assertTrue;
 public class PropNetMachineTest {
 
     @Test
+    public void manyStepthroughTest() {
+        for (int i=0; i<20; i++)
+            stepthroughTest();
+    }
+
+    @Test
     public void stepthroughTest() {
         // does the actions spit out by propnet state machine at each step match
         // backward state machine?
 
+        Random rand = new Random();
         List<Rule> rules = SimpleGames.getButtonsAndLights();
 
         BackwardStateMachine bsm = BackwardStateMachine.createForRules(rules);
@@ -45,32 +54,23 @@ public class PropNetMachineTest {
         System.out.println();
 
         boolean endGame = false;
-        int iteration = 0;
+        int iteration = 1;
         while (!endGame) {
 
             System.out.println("[ITERATION " + iteration++ + "]");
             System.out.println("[BSM STATE] " + bsmState);
             System.out.println("[PNSM STATE] " + pnsmState);
-
-            if (bsm.isTerminal(bsmState)) {
-                // check the goals
-                break;
-            }
-            assertTrue("mismatch between terminal!", bsm.isTerminal(bsmState) == pnsm.isTerminal(pnsmState));
+            System.out.println("[PNSM ON BASES] " + pnsm.net.onBases);
+            //PropNetStateMachine.printTopographicProps(pnsm.net);
 
             ListMultimap<Dob,Dob> bsmActions = bsm.getActions(bsmState);
             ListMultimap<Dob,Dob> pnsmActions = pnsm.getActions(pnsmState);
-
-            System.out.println("[BSM Actions] " + bsmActions);
-            System.out.println("[PNSM Actions] " + pnsmActions);
 
             List<Dob> bsmRoles = Lists.newArrayList(bsmActions.keySet());
             List<Dob> pnsmRoles = Lists.newArrayList(pnsmActions.keySet());
 
             Map<Dob,Dob> matchedRoles = matchDobList(bsmRoles, pnsmRoles);
 
-            System.out.println("[BSM Roles] " + bsmRoles);
-            System.out.println("[PNSM Roles] " + pnsmRoles);
 
             assertTrue("mismatch between roles!", matchedRoles.keySet().size() == bsmRoles.size());
 
@@ -86,17 +86,38 @@ public class PropNetMachineTest {
 
                 assertTrue("mismatch between actions for role" + role, matchedActions.keySet().size() ==
                                                                         bsmRoleActions.size());
-                Dob bsmRoleAction = bsmRoleActions.get(0);
+
+                int actionId = rand.nextInt(bsmRoleActions.size());
+                Dob bsmRoleAction = bsmRoleActions.get(actionId);
 
                 // synchronized actions
-                pickedBSMActions.put(role, bsmRoleActions.get(0));
+                pickedBSMActions.put(role, bsmRoleAction);
                 pickedPNSMActions.put(matchedRoles.get(role), matchedActions.get(bsmRoleAction));
+
+                System.out.println("[BSM ACTION] " + bsmRoleAction);
+                System.out.println("[PNSM ACTION] " + matchedActions.get(bsmRoleAction));
             }
 
+            assertTrue("mismatch between terminal!", bsm.isTerminal(bsmState) == pnsm.isTerminal(pnsmState));
+            // check goals
+            if (bsm.isTerminal(bsmState)) {
 
+                Map<Dob,Integer> bsmGoals = bsm.getGoals(bsmState);
+                Map<Dob,Integer> pnsmGoals = pnsm.getGoals(pnsmState);
+
+                for (Dob bsmRole : matchedRoles.keySet()) {
+                    Dob pnsmRole = matchedRoles.get(bsmRole);
+
+                    assertEquals(bsmGoals.get(bsmRole), pnsmGoals.get(pnsmRole));
+                }
+                break;
+            }
 
             bsmState = bsm.nextState(bsmState, pickedBSMActions);
             pnsmState = pnsm.nextState(pnsmState, pickedPNSMActions);
+
+
+            System.out.println("[PNSM STATE AFTER ACTION] " + pnsm.extractState());
 
             System.out.println();
         }

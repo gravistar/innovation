@@ -66,29 +66,7 @@ public class PropNetTest {
     public void printLightsOnPropnet() {
         List<Rule> rules = SimpleGames.getButtonsAndLights();
 
-        BackwardStateMachine machine = BackwardStateMachine.createForRules(rules);
-        Ruletta ruletta = machine.rta;
-        GameLogicContext context = machine;
-        StratifiedProver prover = machine.prover;
-        Pool pool = prover.pool;
-
-        // get the initial grounds
-        Set<Dob> initGrounds = prover.proveAll(Lists.<Dob>newArrayList());
-
-        System.out.println("[INIT GROUNDS] " + initGrounds);
-
-        // convert inputs to does
-        initGrounds = ProverStateMachine.submersiveReplace(initGrounds, context.INPUT_UNIFY, pool);
-
-        // convert base to trues
-        initGrounds = ProverStateMachine.submersiveReplace(initGrounds, context.BASE_UNIFY, pool);
-
-        System.out.println("[INIT GROUNDS AFTER UNIFIES] " + initGrounds);
-
-        Cachet cachet = new Cachet(ruletta);
-        cachet.storeAllGround(initGrounds);
-
-        PropNet net = PropNetFactory.buildNet(ruletta, cachet);
+        PropNet net = PropNetFactory.createFromRules(rules);
 
         System.out.println("==== LIGHTS ON NET ====");
         System.out.println(net);

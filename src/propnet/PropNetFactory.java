@@ -2,11 +2,15 @@ package propnet;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
+import rekkura.ggp.machina.BackwardStateMachine;
+import rekkura.ggp.machina.ProverStateMachine;
+import rekkura.ggp.milleu.GameLogicContext;
 import rekkura.logic.algorithm.Terra;
 import rekkura.logic.algorithm.Unifier;
 import rekkura.logic.model.Atom;
 import rekkura.logic.model.Dob;
 import rekkura.logic.model.Rule;
+import rekkura.logic.prover.StratifiedProver;
 import rekkura.logic.structure.Cachet;
 import rekkura.logic.structure.Pool;
 import rekkura.logic.structure.Ruletta;
@@ -27,6 +31,31 @@ import java.util.Set;
  * To change this template use File | Settings | File Templates.
  */
 public class PropNetFactory {
+
+
+    public static PropNet createFromRules(List<Rule> rules) {
+        BackwardStateMachine machine = BackwardStateMachine.createForRules(rules);
+        Ruletta ruletta = machine.rta;
+        GameLogicContext context = machine;
+        StratifiedProver prover = machine.prover;
+        Pool pool = prover.pool;
+
+        // get the initial grounds
+        Set<Dob> initGrounds = prover.proveAll(Lists.<Dob>newArrayList());
+
+        // convert inputs to does
+        initGrounds = ProverStateMachine.submersiveReplace(initGrounds, context.INPUT_UNIFY, pool);
+
+        // convert base to trues
+        initGrounds = ProverStateMachine.submersiveReplace(initGrounds, context.BASE_UNIFY, pool);
+
+        System.out.println("[INIT GROUNDS] " + initGrounds);
+
+        Cachet cachet = new Cachet(ruletta);
+        cachet.storeAllGround(initGrounds);
+        PropNet net = PropNetFactory.buildNet(ruletta, cachet);
+        return net;
+    }
 
     /**
      * @param rule
