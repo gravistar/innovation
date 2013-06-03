@@ -33,6 +33,10 @@ import java.util.Set;
  *       bases and nexts separate
  * This is done to keep the propnet a DAG.  This shouldn't be bad because
  * number of bases/legals is not that high.
+ *
+ * Potential hotspot:
+ *  we have to advance twice because of the bases/nexts
+ *
  */
 public class PropNetStateMachine implements GgpStateMachine{
     public PropNet net;
@@ -65,7 +69,7 @@ public class PropNetStateMachine implements GgpStateMachine{
 
     public void printMappings() {
         System.out.println("[INIT] " + context.INIT);
-        System.out.println("[INIT LEGALS] " + alwaysTrue);
+        System.out.println("[LATCHES] " + alwaysTrue);
         System.out.println("[LEGALS] " + legals);
         System.out.println("[GOALS] " + goals);
         System.out.println("[DOESES] " + doeses);
@@ -163,6 +167,7 @@ public class PropNetStateMachine implements GgpStateMachine{
     public Set<Dob> getInitial() {
         net.onBases = initBases;
         setTrues();
+        net.advance();
         return extractState();
     }
 
@@ -182,9 +187,6 @@ public class PropNetStateMachine implements GgpStateMachine{
     }
 
     public boolean checkTerminal() {
-        net.wipe();
-        setTrues();
-        net.advance();
         return net.props.get(context.TERMINAL).val;
     }
 
@@ -197,6 +199,25 @@ public class PropNetStateMachine implements GgpStateMachine{
             net.props.get(base).val = true;
     }
 
+    public void wipeBases() {
+        for (Dob base : nextToBase.values())
+            net.props.get(base).val = false;
+    }
+
+    public Set<Dob> advance(Set<Dob> state, Map<Dob,Dob> actions) {
+        net.wipe();
+        applyState(state);
+        applyActions(actions);
+        net.advance();
+        // ---- done to convert next to true...
+        net.onBases = getOnBases();
+        net.wipe();
+        setTrues();
+        net.advance();
+        // -----------------------
+        return extractState();
+    }
+
     public Set<Dob> advance(Map<Dob,Dob> actions) {
         net.wipe();
         setTrues();
@@ -204,6 +225,10 @@ public class PropNetStateMachine implements GgpStateMachine{
         applyActions(actions);
         net.advance();
         net.onBases = getOnBases();
+        // do again to apply nexts
+        net.wipe();
+        setTrues();
+        net.advance();
         return extractState();
     }
 
@@ -219,7 +244,7 @@ public class PropNetStateMachine implements GgpStateMachine{
 
     @Override
     public Set<Dob> nextState(Set<Dob> state, Map<Dob, Dob> actions) {
-        return advance(actions);
+        return advance(state, actions);
     }
 
     public void applyActions(Map<Dob, Dob> actions) {
@@ -254,9 +279,16 @@ public class PropNetStateMachine implements GgpStateMachine{
         System.out.println();
     }
 
+    public void applyState(Set<Dob> state) {
+        for (Dob prop : state)
+            net.props.get(prop).val = true;
+    }
+
+    // WARNING: this assumes isTerminal is used right
+    // isTerminal(state) -> state = nextState(state,actions) -> isTerminal(state)
     @Override
     public boolean isTerminal(Set<Dob> state) {
-        return checkTerminal();
+        return net.props.get(context.TERMINAL).val;
     }
 
     @Override

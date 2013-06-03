@@ -2,7 +2,7 @@ This is the repo for my player, INnoVation. It uses the Rekkura ggp framework as
 The awesome Rekkura ggp framework is written and maintained by Peter Pham (silentmagesoul). 
 
 Player Status:
-1. uct player works
+1. player.uct player works
 
 Player Todo:
 1. Generate propnet

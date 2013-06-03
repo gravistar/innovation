@@ -1,10 +1,9 @@
-package uct;
+package player.uct;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Multiset;
 import rekkura.logic.model.Dob;
 import rekkura.state.model.StateMachine;
 
@@ -66,13 +65,13 @@ class UCTCharger {
     
     // returns the terminal state
     public Set<Dob> fire(Set<Dob> state, StateMachine<Set<Dob>, Dob> machine) {
-        // do actual uct charge
+        // do actual player.uct charge
         while (!machine.isTerminal(state)) {
 
             ListMultimap<Dob, Dob> candidateActions = machine.getActions(state);
             Map<Dob, Dob> jointActions = Maps.newHashMap();
             
-            // for each role, pick the best uct move
+            // for each role, pick the best player.uct move
             for (Dob role : candidateActions.keySet()) {
                 Preconditions.checkArgument(actionCaches.containsKey(role));
                 UCTCache uctCache = actionCaches.get(role);

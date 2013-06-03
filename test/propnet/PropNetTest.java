@@ -72,5 +72,22 @@ public class PropNetTest {
         System.out.println(net);
     }
 
+    @Test
+    public void connect4PropNet() {
+        List<Rule> rules = SimpleGames.getConnectFourFromFile();
+
+        PropNet net = PropNetFactory.createFromRules(rules);
+        System.out.println("==== CONNECT 4 NET ====");
+        System.out.println(net);
+    }
+
+    @Test
+    public void tictactoePropNet() {
+        List<Rule> rules = SimpleGames.getTicTacToeFromFile();
+        PropNet net = PropNetFactory.createFromRules(rules);
+        System.out.println("==== Tic Tac Toe ====");
+        System.out.println(net);
+
+    }
 
 }

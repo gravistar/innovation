@@ -1,4 +1,4 @@
-package uct;
+package player.uct;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -95,8 +95,7 @@ class UCTCache {
     			bestActions.add(action);
     		}
     	}
-    	
-   	return randomAction(bestActions);
+   	    return randomAction(bestActions);
     }
     
     /**

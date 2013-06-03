@@ -1,4 +1,4 @@
-package uct;
+package player.uct;
 
 import com.google.common.collect.Lists;
 import rekkura.ggp.milleu.Game;
@@ -25,17 +25,16 @@ import java.util.Set;
  */
 public class UCTPlayer extends Player.ProverBased{
 
-    static Random rand = new Random();
-    static final double discFactor = 0.999;
-    private static boolean verbose = false;
+    public static Random rand = new Random();
+    public static final double discFactor = 0.999;
+    private static boolean verbose = true;
+    private static boolean fine = false;
     
     // gross
     private UCTCharger charger;
 
     @Override
     protected void plan() {
-    	System.out.println();
-    	System.out.println("====== NEW GAME ======");
     	charger = new UCTCharger(Lists.newArrayList(machine.getActions(machine.getInitial()).keySet()));
         explore();
     }
@@ -68,7 +67,7 @@ public class UCTPlayer extends Player.ProverBased{
         	charger.fireAndReel(state, machine);
         	selected = charger.bestMove(role, state, candidateActions);
             setDecision(current.turn, selected);
-            if (verbose){
+            if (fine){
             	pair = new StateActionPair(state, selected);
             	
             	System.out.println("[UCT Role: " + role + "] FIRING CHARGE " + chargeCount + "==============");
@@ -83,13 +82,12 @@ public class UCTPlayer extends Player.ProverBased{
 
         if (verbose) {
             if (roleCache.explored(state, selected)) {
+                System.out.println("[UCT Charge Count: " + chargeCount + "]");
         	    System.out.println("[UCT Role: " + role + "] picked move " + selected + " with monte carlo goal score: " + roleCache.monteCarloScore(pair));
-                System.out.println("[UCT Role: " + role + "] picked move " + selected + " with max goal score: " + roleCache.maxGoalScore(pair));
             }
             else
         	    System.out.println("[UCT Role: " + role + "] no charges completed. picking random move.");
+            System.out.println();
         }
     }
-
-
 }

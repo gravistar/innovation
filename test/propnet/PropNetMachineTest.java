@@ -29,19 +29,20 @@ import static org.junit.Assert.assertTrue;
 public class PropNetMachineTest {
 
     @Test
-    public void manyStepthroughTest() {
+    public void manyButtonsLights() {
+        List<Rule> rules = SimpleGames.getButtonsAndLights();
         for (int i=0; i<20; i++)
-            stepthroughTest();
+            stepThrough(rules);
     }
 
     @Test
-    public void stepthroughTest() {
-        // does the actions spit out by propnet state machine at each step match
-        // backward state machine?
+    public void manyTicTacToe() {
+        List<Rule> rules = SimpleGames.getTicTacToeFromFile();
+        for (int i=0; i<20; i++)
+            stepThrough(rules);
+    }
 
-        Random rand = new Random();
-        List<Rule> rules = SimpleGames.getButtonsAndLights();
-
+    public void stepThrough(List<Rule> rules) {
         BackwardStateMachine bsm = BackwardStateMachine.createForRules(rules);
         PropNetStateMachine pnsm = PropNetStateMachine.createPropNetStateMachine(rules);
 
@@ -72,7 +73,7 @@ public class PropNetMachineTest {
             Map<Dob,Dob> matchedRoles = matchDobList(bsmRoles, pnsmRoles);
 
 
-            assertTrue("mismatch between roles!", matchedRoles.keySet().size() == bsmRoles.size());
+            assertTrue("mismatch between roles! pnsm: " + pnsmRoles + " bsm: " + bsmRoles, matchedRoles.keySet().size() == bsmRoles.size());
 
             Map<Dob,Dob> pickedBSMActions = Maps.newHashMap();
             Map<Dob,Dob> pickedPNSMActions = Maps.newHashMap();
@@ -85,7 +86,7 @@ public class PropNetMachineTest {
                 Map<Dob,Dob> matchedActions = matchDobList(bsmRoleActions, pnsmRoleActions);
 
                 assertTrue("mismatch between actions for role" + role, matchedActions.keySet().size() ==
-                                                                        bsmRoleActions.size());
+                        bsmRoleActions.size());
 
                 int actionId = rand.nextInt(bsmRoleActions.size());
                 Dob bsmRoleAction = bsmRoleActions.get(actionId);
@@ -122,6 +123,8 @@ public class PropNetMachineTest {
             System.out.println();
         }
     }
+
+    public Random rand = new Random();
 
     public static Map<Dob,Dob> matchDobList(List<Dob> left, List<Dob> right) {
         Map<Dob,Dob> ret = Maps.newHashMap();

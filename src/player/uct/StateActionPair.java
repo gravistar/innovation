@@ -1,4 +1,4 @@
-package uct;
+package player.uct;
 
 import rekkura.logic.model.Dob;
 

@@ -32,6 +32,7 @@ import java.util.Set;
  */
 public class PropNetFactory {
 
+    public static boolean debug = false;
 
     public static PropNet createFromRules(List<Rule> rules) {
         BackwardStateMachine machine = BackwardStateMachine.createForRules(rules);
@@ -48,8 +49,8 @@ public class PropNetFactory {
 
         // convert base to trues
         initGrounds = ProverStateMachine.submersiveReplace(initGrounds, context.BASE_UNIFY, pool);
-
-        System.out.println("[INIT GROUNDS] " + initGrounds);
+        if (debug)
+            System.out.println("[INIT GROUNDS] " + initGrounds);
 
         Cachet cachet = new Cachet(ruletta);
         cachet.storeAllGround(initGrounds);
@@ -122,7 +123,6 @@ public class PropNetFactory {
     }
 
     public static void negBodyRulePrecon(Atom head, ImmutableList<Atom> body, Cachet cachet) {
-        // head is grounded
         Preconditions.checkArgument(cachet.unisuccess.containsKey(head.dob));
         Preconditions.checkArgument(cachet.unisuccess.get(head.dob).contains(head.dob));
         Preconditions.checkArgument(cachet.unisuccess.get(head.dob).size() == 1);
@@ -167,19 +167,32 @@ public class PropNetFactory {
 
         Node orNode = createAndAddOR(negPropNodes, bottom, net);
         Node notNode = createAndAddNOT(Lists.newArrayList(orNode), bottom, net);
+
         Node headNode = getNodeForProp(head.dob, props, bottom, net);
-        attachInput(headNode, notNode, bottom);
+        // generate a bigOR that's the sole input to headNode if not done already
+        if (headNode.inputs.isEmpty())
+            attachInput(headNode, createAndAddOR(Lists.<Node>newArrayList(), bottom, net), bottom);
+
+        Node bigOR = headNode.inputs.get(0);
+        attachInput(bigOR, notNode, bottom);
     }
 
     public static void processPositiveBodyGrounding(List<Dob> posBodyGrounding,
                                                     Rule rule, Pool pool,
+                                                    Cachet cachet,
                                                     Map<Dob, Node> props,
                                                     Set<Node> bottom,
                                                     Set<Node> net) {
         // generate head grounding
         Dob headGrounding = Terra.applyBodies(rule, posBodyGrounding, Sets.<Dob>newHashSet(), pool);
+        if (debug) {
+                System.out.println("[DEBUG] head grounding: " + headGrounding + " body " + posBodyGrounding);
+        }
         if (headGrounding == null)
             return;
+
+        // store head grounding in cachet??
+        cachet.storeGround(headGrounding);
 
         // generate node for head grounding
         Node headNode = getNodeForProp(headGrounding, props, bottom, net);
@@ -212,6 +225,9 @@ public class PropNetFactory {
         for (Dob pos : posBodyGrounding)
             posNodes.add(getNodeForProp(pos, props, bottom, net));
 
+        if (debug)
+            System.out.println("[DEBUG] number of pos nodes " + posNodes.size());
+
         for (Dob neg : negBodyGroundings)
             negNodes.add(getNodeForProp(neg, props, bottom, net));
 
@@ -239,6 +255,8 @@ public class PropNetFactory {
         List<Rule> rules = Topper.toList(ruletta.ruleOrder);
 
         for (Rule rule : rules) {
+            if (debug)
+            System.out.println("[DEBUG] Processing rule: " + rule);
             Atom head = rule.head;
             ImmutableList<Atom> body = rule.body;
 
@@ -251,10 +269,23 @@ public class PropNetFactory {
             for (Atom bodyTerm : posBodyTerms)
                 posBodySpace.add(bodySpace.get(bodyTerm));
 
+
+            long tc = 1;
+            for (int i=0; i<posBodySpace.size(); i++) {
+                List<Dob> space = posBodySpace.get(i);
+                tc *= space.size();
+            }
+
+            if (debug) {
+                System.out.println("[DEBUG] true count " + tc);
+                System.out.println("[DEBUG] body space " + bodySpace);
+            }
+
             Iterable<List<Dob>> posBodyGroundings = Cartesian.asIterable(posBodySpace);
             int nPosBodyGroundings = 0;
+
             for (List<Dob> posBodyGrounding : posBodyGroundings) {
-                processPositiveBodyGrounding(posBodyGrounding, rule, pool, props, bottom, net);
+                processPositiveBodyGrounding(posBodyGrounding, rule, pool, cachet, props, bottom, net);
                 nPosBodyGroundings++;
             }
 
@@ -266,6 +297,10 @@ public class PropNetFactory {
                     // base case
                     getNodeForProp(head.dob, props, bottom, net);
             }
+
+            if (debug)
+                System.out.println();
+
         }
 
         List<Node> revTop = Topper.toList(Topper.topSort(toMultimap(net), bottom));

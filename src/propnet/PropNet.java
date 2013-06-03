@@ -46,61 +46,80 @@ public class PropNet {
             node.eval();
     }
 
+    // not ALWAYS has an or as input
+    public StringBuilder notString(Node not, Map<Node, Dob> invProps, int nTab) {
+        StringBuilder prefixBuilder = new StringBuilder();
+        for (int i=0; i<nTab; i++)
+            prefixBuilder.append("\t");
+        StringBuilder outBuilder = new StringBuilder();
+        // negative case
+        outBuilder.append(prefixBuilder).append("[NOT]\n");
+        Preconditions.checkArgument(not.inputs.size() == 1 && not.inputs.get(0).fn == NodeFns.OR);
+        Node notOr = not.inputs.get(0);
+        Preconditions.checkArgument(notOr.inputs.size() > 0);
+        outBuilder.append(prefixBuilder).append("\t[OR]\n");
+        for (Node orInput : notOr.inputs) {
+            if (invProps.get(orInput) == null)
+                outBuilder.append(prefixBuilder).append("\t\t[NOT GROUND]\n");
+            else
+                outBuilder.append(prefixBuilder).append("\t\t[").append(invProps.get(orInput)).append("]\n");
+        }
+        return outBuilder;
+    }
+
+
     // warning: big output
     @Override public String toString() {
-        System.out.println("[SUMMARY] Number of props: " + props.keySet().size());
-        System.out.println("[SUMMARY] Number of nodes: " + tnet.size());
-        String output = "";
+        StringBuilder output = new StringBuilder();
+        output.append("[SUMMARY] Number of props: ").append(props.keySet().size()).append('\n');
+        output.append("[SUMMARY] Number of nodes: ").append(tnet.size()).append('\n');
         Map<Node, Dob> invProps = invProps();
 
         for (Dob prop : props.keySet()) {
             Node node = props.get(prop);
             if (node.inputs.isEmpty()) {
-                output += "[BASE: " + prop + "]\n";
+                output.append("[BASE: ").append(prop).append("]\n");
             } else {
-                output += "[INTERNAL: " + prop + "]\n";
+                output.append("[INTERNAL: ").append(prop).append("]\n");
 
                 // special case when all negative
                 if (node.inputs.get(0).fn == NodeFns.NOT) {
-                    output += "\t[NOT]\n";
                     Node not = node.inputs.get(0);
-                    Preconditions.checkArgument(not.inputs.get(0).fn == NodeFns.OR);
-                    output += "\t\t[OR]\n";
+                    output.append(notString(not, invProps, 1));
                     continue;
                 }
 
                 Preconditions.checkArgument(node.inputs.get(0).fn == NodeFns.OR);
                 Node or = node.inputs.get(0);
 
-                output += "\t[OR]\n";
+                // otherwise, it HAS to be an OR
+                output.append("\t[OR]\n");
                 // process each and
-                for (Node and : or.inputs) {
-                    output += "\t\t[AND]\n";
-                    for (Node andInput : and.inputs) {
-                        // this is a proposition
-                        if (andInput.fn == NodeFns.OR) {
-                            output += "\t\t\t[" + invProps.get(andInput) + "]\n";
-                        } else if (andInput.fn == NodeFns.NOT) {
-                            // negative case
-                            output += "\t\t\t[NOT]\n";
-                            Node not = andInput;
-                            Preconditions.checkArgument(not.inputs.size() == 1 && not.inputs.get(0).fn == NodeFns.OR);
-                            Node notOr = andInput.inputs.get(0);
-                            Preconditions.checkArgument(notOr.inputs.size() > 0);
-                            output += "\t\t\t\t[OR]\n";
-                            for (Node orInput : notOr.inputs) {
-                                String prefix = "\t\t\t\t\t";
-                                output += prefix;
-                                if (invProps.get(orInput) == null)
-                                    output += "[NOT GROUND]\n";
-                                else
-                                    output += "[" + invProps.get(orInput) + "]\n";
+                for (Node orIn : or.inputs) {
+
+                    if (orIn.fn == NodeFns.AND) {
+                        Node and = orIn;
+                        output.append("\t\t[AND]\n");
+                        for (Node andInput : and.inputs) {
+                            // this is a proposition
+                            if (andInput.fn == NodeFns.OR) {
+                                output.append("\t\t\t[").append(invProps.get(andInput)).append("]\n");
+                            } else if (andInput.fn == NodeFns.NOT) {
+                                // negative case
+                                Node not = andInput;
+                                output.append(notString(not, invProps, 3));
                             }
                         }
+                    }
+
+                    // can happen (negative grounded body as input)
+                    if (orIn.fn == NodeFns.NOT) {
+                        Node not = orIn;
+                        output.append(notString(not, invProps, 2));
                     }
                 }
             }
         }
-        return output;
+        return output.toString();
     }
 }
