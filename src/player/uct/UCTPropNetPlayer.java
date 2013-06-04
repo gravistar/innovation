@@ -23,10 +23,16 @@ public class UCTPropNetPlayer extends PropNetBased{
 
     private UCTCharger charger;
 
+    public static String getTag() {
+        return "[UCT PropNet]";
+    }
+
+
     @Override
     protected void plan() {
         charger = new UCTCharger(Lists.newArrayList(machine.getActions(machine.getInitial()).keySet()));
-        System.out.println("[UCT PROPNET] Done building charger!");
+        System.out.println(getTag() + "Done building charger!");
+        System.out.println(getTag() + "Role: " + role);
         explore();
     }
 
@@ -58,12 +64,13 @@ public class UCTPropNetPlayer extends PropNetBased{
             setDecision(current.turn, selected);
         }
         if (verbose) {
+            System.out.println(getTag() + " Charge count: " + chargeCount);
+            System.out.println(getTag() + " State cache size: " + charger.sharedStateCache.size());
             if (roleCache.explored(state, selected)) {
-                System.out.println("[UCT PROPNET Charge Count: " + chargeCount + "]");
-                System.out.println("[UCT PROPNET Role: " + role + "] picked move " + selected + " with monte carlo goal score: " + roleCache.monteCarloScore(pair));
+                System.out.println(getTag() + " Role " + role + "] picked move " + selected + " with monte carlo goal score: " + roleCache.monteCarloScore(pair));
             }
             else
-                System.out.println("[UCT PROPNET Role: " + role + "] no charges completed. picking random move.");
+                System.out.println(getTag() + " Role " + role + "] no charges completed. picking random move.");
             System.out.println();
         }
     }

@@ -29,13 +29,18 @@ public class UCTPlayer extends Player.ProverBased{
     public static final double discFactor = 0.999;
     private static boolean verbose = true;
     private static boolean fine = false;
-    
+
+    private static String getTag() {
+        return "[UCT Vanilla]";
+    }
+
     // gross
     private UCTCharger charger;
 
     @Override
     protected void plan() {
     	charger = new UCTCharger(Lists.newArrayList(machine.getActions(machine.getInitial()).keySet()));
+        System.out.println(getTag() + " Role: " + role);
         explore();
     }
 
@@ -67,26 +72,16 @@ public class UCTPlayer extends Player.ProverBased{
         	charger.fireAndReel(state, machine);
         	selected = charger.bestMove(role, state, candidateActions);
             setDecision(current.turn, selected);
-            if (fine){
-            	pair = new StateActionPair(state, selected);
-            	
-            	System.out.println("[UCT Role: " + role + "] FIRING CHARGE " + chargeCount + "==============");
-             	
-            	if (roleCache.explored(state, selected))
-            		System.out.println("[UCT Role: " + role + "] Charge picked move " + selected + " with monte carlo score: " + roleCache.monteCarloScore(pair));
-            	else
-            		System.out.println("[UCT Role: " + role + "] ERROR: picking unexplored move");
-            	System.out.println();
-            }
         }
 
         if (verbose) {
+            System.out.println(getTag() + " Charge Count: " + chargeCount + "]");
+            System.out.println(getTag() + " State cache size: " + charger.sharedStateCache.size());
             if (roleCache.explored(state, selected)) {
-                System.out.println("[UCT Charge Count: " + chargeCount + "]");
-        	    System.out.println("[UCT Role: " + role + "] picked move " + selected + " with monte carlo goal score: " + roleCache.monteCarloScore(pair));
+        	    System.out.println(getTag() + " Role " + role + " picked move " + selected + " with monte carlo goal score: " + roleCache.monteCarloScore(pair));
             }
             else
-        	    System.out.println("[UCT Role: " + role + "] no charges completed. picking random move.");
+        	    System.out.println(getTag() + "Role " + role + " no charges completed. picking random move.");
             System.out.println();
         }
     }

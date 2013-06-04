@@ -38,8 +38,7 @@ public class TestUtil {
                     wins.put(role, 1 + wins.get(role));
             }
             total++;
-            if (total == limit)
-                output();
+            output();
         }
 
         public void output() {
@@ -47,6 +46,7 @@ public class TestUtil {
             for (Dob r : wins.keySet()) {
                 System.out.println("Player " + r + " has " + wins.get(r) + " / " + total);
             }
+            System.out.println();
         }
     }
 

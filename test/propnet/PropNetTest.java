@@ -87,7 +87,6 @@ public class PropNetTest {
         PropNet net = PropNetFactory.createFromRules(rules);
         System.out.println("==== Tic Tac Toe ====");
         System.out.println(net);
-
     }
 
 }

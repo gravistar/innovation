@@ -61,8 +61,6 @@ public class PropNetMachineTest {
             System.out.println("[ITERATION " + iteration++ + "]");
             System.out.println("[BSM STATE] " + bsmState);
             System.out.println("[PNSM STATE] " + pnsmState);
-            System.out.println("[PNSM ON BASES] " + pnsm.net.onBases);
-            //PropNetStateMachine.printTopographicProps(pnsm.net);
 
             ListMultimap<Dob,Dob> bsmActions = bsm.getActions(bsmState);
             ListMultimap<Dob,Dob> pnsmActions = pnsm.getActions(pnsmState);
@@ -71,7 +69,6 @@ public class PropNetMachineTest {
             List<Dob> pnsmRoles = Lists.newArrayList(pnsmActions.keySet());
 
             Map<Dob,Dob> matchedRoles = matchDobList(bsmRoles, pnsmRoles);
-
 
             assertTrue("mismatch between roles! pnsm: " + pnsmRoles + " bsm: " + bsmRoles, matchedRoles.keySet().size() == bsmRoles.size());
 
@@ -116,9 +113,6 @@ public class PropNetMachineTest {
 
             bsmState = bsm.nextState(bsmState, pickedBSMActions);
             pnsmState = pnsm.nextState(pnsmState, pickedPNSMActions);
-
-
-            System.out.println("[PNSM STATE AFTER ACTION] " + pnsm.extractState());
 
             System.out.println();
         }

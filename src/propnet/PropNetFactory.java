@@ -54,7 +54,7 @@ public class PropNetFactory {
 
         Cachet cachet = new Cachet(ruletta);
         cachet.storeAllGround(initGrounds);
-        PropNet net = PropNetFactory.buildNet(ruletta, cachet);
+        PropNet net = PropNetFactory.buildNet(ruletta, cachet, context);
         return net;
     }
 
@@ -161,6 +161,11 @@ public class PropNetFactory {
                                               Set<Node> net) {
         negBodyRulePrecon(head, body, cachet);
 
+        // special case for does! no inputs!
+        Node headNode = getNodeForProp(head.dob, props, bottom, net);
+        if (isDoes(head))
+            return;
+
         List<Node> negPropNodes = Lists.newArrayList();
         for (Atom bodyTerm : body)
             negPropNodes.add(getNodeForProp(bodyTerm.dob, props, bottom, net));
@@ -168,13 +173,17 @@ public class PropNetFactory {
         Node orNode = createAndAddOR(negPropNodes, bottom, net);
         Node notNode = createAndAddNOT(Lists.newArrayList(orNode), bottom, net);
 
-        Node headNode = getNodeForProp(head.dob, props, bottom, net);
+
         // generate a bigOR that's the sole input to headNode if not done already
         if (headNode.inputs.isEmpty())
             attachInput(headNode, createAndAddOR(Lists.<Node>newArrayList(), bottom, net), bottom);
 
         Node bigOR = headNode.inputs.get(0);
         attachInput(bigOR, notNode, bottom);
+    }
+
+    public static boolean isDoes(Atom head) {
+        return head.dob.size() > 0 && head.dob.at(0).name.equals("does");
     }
 
     public static void processPositiveBodyGrounding(List<Dob> posBodyGrounding,
@@ -185,9 +194,6 @@ public class PropNetFactory {
                                                     Set<Node> net) {
         // generate head grounding
         Dob headGrounding = Terra.applyBodies(rule, posBodyGrounding, Sets.<Dob>newHashSet(), pool);
-        if (debug) {
-                System.out.println("[DEBUG] head grounding: " + headGrounding + " body " + posBodyGrounding);
-        }
         if (headGrounding == null)
             return;
 
@@ -196,6 +202,10 @@ public class PropNetFactory {
 
         // generate node for head grounding
         Node headNode = getNodeForProp(headGrounding, props, bottom, net);
+
+        // special case for does! no inputs!
+        if (isDoes(rule.head))
+            return;
 
         // generate a bigOR that's the sole input to headNode if not done already
         if (headNode.inputs.isEmpty())
@@ -225,9 +235,6 @@ public class PropNetFactory {
         for (Dob pos : posBodyGrounding)
             posNodes.add(getNodeForProp(pos, props, bottom, net));
 
-        if (debug)
-            System.out.println("[DEBUG] number of pos nodes " + posNodes.size());
-
         for (Dob neg : negBodyGroundings)
             negNodes.add(getNodeForProp(neg, props, bottom, net));
 
@@ -247,7 +254,11 @@ public class PropNetFactory {
         attachInput(bigOR, AND, bottom);
     }
 
-    public static PropNet buildNet(Ruletta ruletta, Cachet cachet) {
+    public static Rule cleanRule (Rule rule, GameLogicContext context) {
+        return Unifier.replace(rule, context.INPUT_UNIFY, rule.vars);
+    }
+
+    public static PropNet buildNet(Ruletta ruletta, Cachet cachet, GameLogicContext context) {
         Map<Dob, Node> props = Maps.newHashMap(); // the nodes for the dobs will have to be set each turn
         Set<Node> net = Sets.newHashSet();
         Set<Node> bottom = Sets.newHashSet(); // for constructing the topological order without having to do N^2
@@ -255,8 +266,11 @@ public class PropNetFactory {
         List<Rule> rules = Topper.toList(ruletta.ruleOrder);
 
         for (Rule rule : rules) {
+
+            rule = cleanRule(rule, context);
+
             if (debug)
-            System.out.println("[DEBUG] Processing rule: " + rule);
+                System.out.println("[DEBUG] Processing rule: " + rule);
             Atom head = rule.head;
             ImmutableList<Atom> body = rule.body;
 
@@ -276,10 +290,8 @@ public class PropNetFactory {
                 tc *= space.size();
             }
 
-            if (debug) {
+            if (debug)
                 System.out.println("[DEBUG] true count " + tc);
-                System.out.println("[DEBUG] body space " + bodySpace);
-            }
 
             Iterable<List<Dob>> posBodyGroundings = Cartesian.asIterable(posBodySpace);
             int nPosBodyGroundings = 0;

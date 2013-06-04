@@ -17,12 +17,12 @@ import java.util.Set;
  * Also used to select the best move.
  */
 class UCTCharger {
-    Map<Dob, UCTCache> actionCaches;
-    private Map<Set<Dob>, Integer> sharedStateCache;
+    public Map<Dob, UCTCache> actionCaches;
+    public Map<Set<Dob>, Integer> sharedStateCache;
 
     // history stacks
-    private Deque<Set<Dob>> stateHistory = Lists.newLinkedList(); // state hashes
-    private Deque<Map<Dob, Dob>> moveHistory = Lists.newLinkedList();
+    public Deque<Set<Dob>> stateHistory = Lists.newLinkedList(); // state hashes
+    public Deque<Map<Dob, Dob>> moveHistory = Lists.newLinkedList();
 
     public UCTCharger(List<Dob> roles) {
         sharedStateCache = Maps.newHashMap();

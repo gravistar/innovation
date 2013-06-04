@@ -41,6 +41,7 @@ import java.util.Set;
 public class PropNetStateMachine implements GgpStateMachine{
     public PropNet net;
     public Map<Dob,Dob> nextToBase;
+    public Map<Dob,Dob> legalToDoes;
     public Set<Dob> initBases;
     public Set<Dob> legals;
     public Set<Dob> alwaysTrue;
@@ -55,6 +56,8 @@ public class PropNetStateMachine implements GgpStateMachine{
         this.context = context;
 
         // setup all these things
+        Colut.remove(alwaysTrue, context.TERMINAL);
+
         this.alwaysTrue = alwaysTrue;
         legals = findDobs(net.props.keySet(), context.LEGAL);
         goals = findDobs(net.props.keySet(), context.GOAL);
@@ -64,7 +67,8 @@ public class PropNetStateMachine implements GgpStateMachine{
         Set<Dob> nexts = findDobs(net.props.keySet(), context.NEXT);
 
         initBases = findInitBases(net.props.keySet(), bases, context.INIT);
-        nextToBase = mapNextToBase(nexts, bases);
+        nextToBase = constructDobMapping(nexts, bases, nextBaseEquals);
+        legalToDoes = constructDobMapping(legals, doeses, legalDoesEqual);
     }
 
     public void printMappings() {
@@ -77,12 +81,31 @@ public class PropNetStateMachine implements GgpStateMachine{
         System.out.println("[INIT BASES] " + initBases);
     }
 
-    public static Map<Dob,Dob> mapNextToBase(Set<Dob> nexts, Set<Dob> bases) {
+    public static interface DobEqualsFn {
+        public boolean equals(Dob left, Dob right);
+    }
+
+    public static DobEqualsFn nextBaseEquals = new DobEqualsFn() {
+        @Override
+        public boolean equals(Dob left, Dob right) {
+            return Dob.compare(left.at(1), right.at(1)) == 0;
+        }
+    };
+
+    public static DobEqualsFn legalDoesEqual = new DobEqualsFn() {
+        @Override
+        public boolean equals(Dob left, Dob right) {
+            return (Dob.compare(left.at(1), right.at(1)) == 0)
+                    && (Dob.compare(left.at(2), right.at(2)) == 0);
+        }
+    };
+
+    public static Map<Dob,Dob> constructDobMapping(Set<Dob> keys, Set<Dob> values, DobEqualsFn equalsFn) {
         Map<Dob, Dob> ret = Maps.newHashMap();
-        for (Dob next : nexts) {
-            for (Dob base : bases) {
-                if (Dob.compare(next.at(1), base.at(1)) == 0) {
-                    ret.put(next, base);
+        for (Dob key : keys) {
+            for (Dob value : values) {
+                if (equalsFn.equals(key, value)) {
+                    ret.put(key, value);
                     break;
                 }
             }
@@ -143,7 +166,7 @@ public class PropNetStateMachine implements GgpStateMachine{
 
         Cachet cachet = new Cachet(ruletta);
         cachet.storeAllGround(initGrounds);
-        PropNet net = PropNetFactory.buildNet(ruletta, cachet);
+        PropNet net = PropNetFactory.buildNet(ruletta, cachet, context);
         Set<Dob> alwaysTrue = findAlwaysTrue(context, initGrounds);
         return new PropNetStateMachine(net, context, alwaysTrue);
     }
@@ -165,14 +188,19 @@ public class PropNetStateMachine implements GgpStateMachine{
 
     @Override
     public Set<Dob> getInitial() {
-        net.onBases = initBases;
-        setTrues();
-        net.advance();
-        return extractState();
+        net.wipe();
+        applyLatches();
+        applyState(initBases);
+        // there is no next one. special case
+        return Colut.union(initBases, extractTrues());
     }
 
     @Override
     public ListMultimap<Dob, Dob> getActions(Set<Dob> state) {
+        net.wipe();
+        applyLatches();
+        applyState(state);
+        net.advance();
         return extractLegals();
     }
 
@@ -180,59 +208,30 @@ public class PropNetStateMachine implements GgpStateMachine{
         ListMultimap<Dob,Dob> ret = ArrayListMultimap.create();
         for (Dob legal : legals) {
             if (net.props.get(legal).val) {
-                ret.put(legal.at(1), Unifier.replace(legal, context.LEGAL_UNIFY));
+                ret.put(legal.at(1), legalToDoes.get(legal));
             }
         }
         return ret;
     }
 
-    public boolean checkTerminal() {
-        return net.props.get(context.TERMINAL).val;
-    }
-
-    public void setTrues() {
-        // active latches
-        for (Dob latch : alwaysTrue)
-            net.props.get(latch).val = true;
-        // turn on cached bases
-        for (Dob base : net.onBases)
-            net.props.get(base).val = true;
-    }
-
-    public void wipeBases() {
-        for (Dob base : nextToBase.values())
-            net.props.get(base).val = false;
-    }
-
     public Set<Dob> advance(Set<Dob> state, Map<Dob,Dob> actions) {
         net.wipe();
+        applyLatches();
         applyState(state);
         applyActions(actions);
         net.advance();
-        // ---- done to convert next to true...
-        net.onBases = getOnBases();
-        net.wipe();
-        setTrues();
-        net.advance();
-        // -----------------------
-        return extractState();
+        return extractNexts();
     }
 
-    public Set<Dob> advance(Map<Dob,Dob> actions) {
-        net.wipe();
-        setTrues();
-        net.onBases.clear();
-        applyActions(actions);
-        net.advance();
-        net.onBases = getOnBases();
-        // do again to apply nexts
-        net.wipe();
-        setTrues();
-        net.advance();
-        return extractState();
+    public Set<Dob> extractTrues() {
+        Set<Dob> ret = Sets.newHashSet();
+        for (Dob truth : nextToBase.values())
+            if (net.props.get(truth).val)
+                ret.add(truth);
+        return ret;
     }
 
-    public Set<Dob> getOnBases() {
+    public Set<Dob> extractNexts() {
         Set<Dob> ret = Sets.newHashSet();
         for (Dob next : nextToBase.keySet())
             if (net.props.get(next).val) {
@@ -245,6 +244,16 @@ public class PropNetStateMachine implements GgpStateMachine{
     @Override
     public Set<Dob> nextState(Set<Dob> state, Map<Dob, Dob> actions) {
         return advance(state, actions);
+    }
+
+    public void applyLatches() {
+        for (Dob latch : alwaysTrue)
+            net.props.get(latch).val = true;
+    }
+
+    public void applyState(Set<Dob> state) {
+        for (Dob truth : state)
+            net.props.get(truth).val = true;
     }
 
     public void applyActions(Map<Dob, Dob> actions) {
@@ -279,15 +288,14 @@ public class PropNetStateMachine implements GgpStateMachine{
         System.out.println();
     }
 
-    public void applyState(Set<Dob> state) {
-        for (Dob prop : state)
-            net.props.get(prop).val = true;
-    }
-
     // WARNING: this assumes isTerminal is used right
     // isTerminal(state) -> state = nextState(state,actions) -> isTerminal(state)
     @Override
     public boolean isTerminal(Set<Dob> state) {
+        net.wipe();
+        applyLatches();
+        applyState(state);
+        net.advance();
         return net.props.get(context.TERMINAL).val;
     }
 

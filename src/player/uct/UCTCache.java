@@ -22,10 +22,10 @@ import java.util.Set;
  * TODO: potential optimization. Don't cache the state-action pairs when noop is the only choice.
  */
 class UCTCache {
-    private Map<StateActionPair, Double> goalScoreTotal = Maps.newHashMap();
-    private Map<StateActionPair, Double> maxGoalScore = Maps.newHashMap();
-    private Map<StateActionPair, Integer> timesTaken = Maps.newHashMap();
-    private Map<Set<Dob>, Integer> timesVisited = Maps.newHashMap();
+    public Map<StateActionPair, Double> goalScoreTotal = Maps.newHashMap();
+    public Map<StateActionPair, Double> maxGoalScore = Maps.newHashMap();
+    public Map<StateActionPair, Integer> timesTaken = Maps.newHashMap();
+    public Map<Set<Dob>, Integer> timesVisited = Maps.newHashMap();
     private static double C = 40;
 
     // For sharing a single state visited cache among multiple roles
