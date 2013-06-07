@@ -21,6 +21,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import static org.junit.Assert.assertEquals;
+
 /**
  * Created with IntelliJ IDEA.
  * User: david
@@ -78,7 +80,8 @@ public class PropNetTest {
 
         PropNet net = PropNetFactory.createFromRules(rules);
         System.out.println("==== CONNECT 4 NET ====");
-        System.out.println(net);
+        // too big
+        //System.out.println(net);
     }
 
     @Test

@@ -32,7 +32,7 @@ import java.util.Set;
  */
 public class PropNetFactory {
 
-    public static boolean debug = false;
+    public static boolean debug = true;
 
     public static PropNet createFromRules(List<Rule> rules) {
         BackwardStateMachine machine = BackwardStateMachine.createForRules(rules);
@@ -56,6 +56,13 @@ public class PropNetFactory {
         cachet.storeAllGround(initGrounds);
         PropNet net = PropNetFactory.buildNet(ruletta, cachet, context);
         return net;
+    }
+
+    public static List<Dob> posBodies(Rule rule) {
+        List<Dob> ret = Lists.newArrayList();
+        for (Atom body : Atom.filterPositives(rule.body))
+            ret.add(body.dob);
+        return ret;
     }
 
     /**
@@ -186,20 +193,13 @@ public class PropNetFactory {
         return head.dob.size() > 0 && head.dob.at(0).name.equals("does");
     }
 
-    public static void processPositiveBodyGrounding(List<Dob> posBodyGrounding,
-                                                    Rule rule, Pool pool,
-                                                    Cachet cachet,
-                                                    Map<Dob, Node> props,
-                                                    Set<Node> bottom,
-                                                    Set<Node> net) {
-        // generate head grounding
-        Dob headGrounding = Terra.applyBodies(rule, posBodyGrounding, Sets.<Dob>newHashSet(), pool);
-        if (headGrounding == null)
-            return;
-
-        // store head grounding in cachet??
-        cachet.storeGround(headGrounding);
-
+    public static void makeNodesForPosRule(Dob headGrounding,
+                                  List<Dob> posBodyGrounding,
+                                  Rule rule,
+                                  Pool pool,
+                                  Map<Dob,Node> props,
+                                  Set<Node> bottom,
+                                  Set<Node> net) {
         // generate node for head grounding
         Node headNode = getNodeForProp(headGrounding, props, bottom, net);
 
@@ -254,9 +254,109 @@ public class PropNetFactory {
         attachInput(bigOR, AND, bottom);
     }
 
+    public static void processPositiveBodyGrounding(List<Dob> posBodyGrounding,
+                                                    Rule rule, Pool pool,
+                                                    Cachet cachet,
+                                                    Map<Dob, Node> props,
+                                                    Set<Node> bottom,
+                                                    Set<Node> net) {
+        // generate head grounding
+        Dob headGrounding = Terra.applyBodies(rule, posBodyGrounding, Sets.<Dob>newHashSet(), pool);
+        if (headGrounding == null)
+            return;
+
+        // store head grounding in cachet??
+        cachet.storeGround(headGrounding);
+
+        makeNodesForPosRule(headGrounding, posBodyGrounding, rule, pool, props, bottom, net);
+
+        /*
+        // generate node for head grounding
+        Node headNode = getNodeForProp(headGrounding, props, bottom, net);
+
+        // special case for does! no inputs!
+        if (isDoes(rule.head))
+            return;
+
+        // generate a bigOR that's the sole input to headNode if not done already
+        if (headNode.inputs.isEmpty())
+            attachInput(headNode, createAndAddOR(Lists.<Node>newArrayList(), bottom, net), bottom);
+
+        Node bigOR = headNode.inputs.get(0);
+
+        // get the unification of all vars in rule
+        // includes those in negative terms by datalog definition
+        // valid since applyBodies passed
+        Map<Dob,Dob> posUnitedUnify = Unifier.unifyListVars(
+                Atom.asDobList(Atom.filterPositives(rule.body)),
+                posBodyGrounding,
+                rule.vars);
+
+        List<Dob> negBodyGroundings = Lists.newArrayList();
+        for (Atom negTerm : Atom.filterNegatives(rule.body)) {
+            // this better not be null...
+            negBodyGroundings.add(
+                    Preconditions.checkNotNull(
+                            pool.dobs.submerge(Unifier.replace(negTerm.dob, posUnitedUnify))));
+        }
+
+        List<Node> posNodes = Lists.newArrayList();
+        List<Node> negNodes = Lists.newArrayList();
+
+        for (Dob pos : posBodyGrounding)
+            posNodes.add(getNodeForProp(pos, props, bottom, net));
+
+        for (Dob neg : negBodyGroundings)
+            negNodes.add(getNodeForProp(neg, props, bottom, net));
+
+        // create AND for this set of body groundings
+        Node AND = createAndAddAND(posNodes, bottom, net);
+
+        // squash nots and add as inputs to the and
+        if (negNodes.isEmpty() == false) {
+            Node negOR = createAndAddOR(negNodes, bottom, net);
+            Node negNOT = createAndAddNOT(Lists.<Node>newArrayList(negOR), bottom, net);
+
+            // add to posAND
+            attachInput(AND, negNOT, bottom);
+        }
+
+        // add to bigOR inputs
+        attachInput(bigOR, AND, bottom);
+        */
+    }
+
     public static Rule cleanRule (Rule rule, GameLogicContext context) {
         return Unifier.replace(rule, context.INPUT_UNIFY, rule.vars);
     }
+
+    public static Rule storeGroundedRule (Rule rule, Cachet cachet, Pool pool) {
+        Rule submerged = pool.rules.submerge(rule);
+
+        cachet.storeGround(submerged.head.dob);
+        for (Atom a : submerged.body) {
+            cachet.storeGround(a.dob);
+        }
+        return submerged;
+    }
+
+    public static void processGroundedRule(Rule grounded, Cachet cachet, Pool pool, Map<Dob,Node> props, Set<Node> bottom,
+                                           Set<Node> net) {
+        Atom head = grounded.head;
+        ImmutableList<Atom> body = grounded.body;
+        if (Atom.filterPositives(grounded.body).isEmpty()) {
+            if (!body.isEmpty())
+                // rule with only negative grounded bodies
+                processAllNegativeBody(head, body, cachet, props, bottom, net);
+            else
+                // base case
+                getNodeForProp(head.dob, props, bottom, net);
+        } else {
+            // has some positive body terms
+            makeNodesForPosRule(head.dob, posBodies(grounded), grounded, pool, props, bottom, net);
+        }
+    }
+
 
     public static PropNet buildNet(Ruletta ruletta, Cachet cachet, GameLogicContext context) {
         Map<Dob, Node> props = Maps.newHashMap(); // the nodes for the dobs will have to be set each turn
@@ -271,8 +371,15 @@ public class PropNetFactory {
 
             if (debug)
                 System.out.println("[DEBUG] Processing rule: " + rule);
-            Atom head = rule.head;
-            ImmutableList<Atom> body = rule.body;
+
+            // already grounded?
+            if (rule.vars.isEmpty()) {
+                Rule grounded = storeGroundedRule(rule, cachet, pool);
+                processGroundedRule(grounded, cachet, pool, props, bottom, net);
+                continue;
+            }
+
+            List<Atom> body = rule.body;
 
             // what should cachet be expected to have??
             ListMultimap<Atom,Dob> bodySpace = Terra.getBodySpace(rule, cachet);
@@ -285,29 +392,74 @@ public class PropNetFactory {
 
 
             long tc = 1;
-            for (int i=0; i<posBodySpace.size(); i++) {
+            /*for (int i=0; i<posBodySpace.size(); i++) {
                 List<Dob> space = posBodySpace.get(i);
                 tc *= space.size();
-            }
+            }*/
 
-            if (debug)
-                System.out.println("[DEBUG] true count " + tc);
 
-            Iterable<List<Dob>> posBodyGroundings = Cartesian.asIterable(posBodySpace);
+            /*Iterable<List<Dob>> posBodyGroundings = Cartesian.asIterable(posBodySpace);
             int nPosBodyGroundings = 0;
 
             for (List<Dob> posBodyGrounding : posBodyGroundings) {
                 processPositiveBodyGrounding(posBodyGrounding, rule, pool, cachet, props, bottom, net);
                 nPosBodyGroundings++;
+            }*/
+
+            // handle the grounded case
+
+
+            // unification of positive body
+            SetMultimap<Dob,Dob> unitedUnification = unitedUnification(rule, posBodySpace);
+            List<Dob> vars = Lists.newArrayList(unitedUnification.keySet());
+            List<List<Dob>> unitedAsList = Lists.newArrayList();
+            for (Dob var : vars) {
+                unitedAsList.add(Lists.newArrayList(unitedUnification.get(var)));
+                tc *= unitedUnification.get(var).size();
             }
 
-            if (nPosBodyGroundings == 0) {
-                if (!body.isEmpty())
-                    // rule with only negative grounded bodies
-                    processAllNegativeBody(head, body, cachet, props, bottom, net);
-                else
-                    // base case
-                    getNodeForProp(head.dob, props, bottom, net);
+            if (debug) {
+                System.out.println("[DEBUG] true count " + tc);
+                System.out.println("[DEBUG] united unification " + unitedUnification);
+            }
+
+            Iterable<List<Dob>> unifications = Cartesian.asIterable(unitedAsList);
+
+            int nPosBodyGroundings = 0;
+            int count = 0;
+            for (List<Dob> unifyAsList : unifications) {
+                count++;
+                if (debug) {
+                    //if (count % 10000 == 0)
+                    //    System.out.println("Done processing " + count + "/" + tc + " var assignments");
+                }
+                Preconditions.checkArgument(unifyAsList.size() == vars.size());
+                // create unification
+                Map<Dob,Dob> unify = Maps.newHashMap();
+                for (int i=0; i<vars.size(); i++)
+                    unify.put(vars.get(i), unifyAsList.get(i));
+
+                // check distinct
+                if (!rule.evaluateDistinct(unify))
+                    continue;
+
+                // keep no variables
+                Rule grounded = Unifier.replace(rule, unify, Sets.<Dob>newHashSet());
+
+                // are the bases actually valid?
+                boolean validBases = true;
+                for (Atom groundedBody : grounded.body) {
+                    if (!pool.dobs.cache.containsKey(groundedBody.dob.toString()))
+                        validBases = false;
+                }
+
+                if (!validBases)
+                    continue;
+
+                Rule stored = storeGroundedRule(grounded, cachet, pool);
+
+                makeNodesForPosRule(stored.head.dob, posBodies(stored), stored, pool, props, bottom, net);
+                nPosBodyGroundings++;
             }
 
             if (debug)
@@ -319,6 +471,26 @@ public class PropNetFactory {
         List<Node> top = Lists.reverse(revTop);
         Preconditions.checkArgument(top.size() == net.size());
         return new PropNet(props, top);
+    }
+
+    // united unifications
+    // key: variable, value: grounding
+    public static SetMultimap<Dob,Dob> unitedUnification(Rule rule, List<List<Dob>> posBodySpace) {
+        SetMultimap<Dob,Dob> ret = HashMultimap.create();
+        List<Dob> posBodies = posBodies(rule);
+        Preconditions.checkArgument(posBodies.size() == posBodySpace.size());
+        for (int i=0; i<posBodies.size(); i++) {
+            Dob ungrounded = posBodies.get(i);
+            for (Dob ground : posBodySpace.get(i)) {
+                Map<Dob,Dob> unification = Unifier.unify(ungrounded, ground);
+                if (unification == null)
+                    continue;
+                for (Dob var : unification.keySet())
+                    if (var.name.startsWith("?"))
+                        ret.put(var, unification.get(var));
+            }
+        }
+        return ret;
     }
 
     public static ListMultimap<Node,Node> toMultimap(Set<Node> net) {
