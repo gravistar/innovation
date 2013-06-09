@@ -16,6 +16,7 @@ import rekkura.logic.prover.StratifiedProver;
 import rekkura.logic.structure.Cachet;
 import rekkura.logic.structure.Pool;
 import rekkura.logic.structure.Ruletta;
+import rekkura.state.algorithm.Topper;
 import rekkura.util.Colut;
 
 import java.util.List;
@@ -147,28 +148,21 @@ public class PropNetStateMachine implements GgpStateMachine{
         return ret;
     }
 
-    // piggybacks off the backward state machine
+    /**
+     * This is gross because code is duplicated with PropNetFactory.createFromRules
+     * but unfortunately java doesn't have pattern matching
+     * @param rules
+     * @return
+     */
     public static PropNetStateMachine createPropNetStateMachine(List<Rule> rules) {
         BackwardStateMachine machine = BackwardStateMachine.createForRules(rules);
-        Ruletta ruletta = machine.rta;
-        GameLogicContext context = machine;
-        StratifiedProver prover = machine.prover;
-        Pool pool = prover.pool;
-
-        // get the initial grounds
-        Set<Dob> initGrounds = prover.proveAll(Lists.<Dob>newArrayList());
-
-        // convert inputs to does
-        initGrounds = ProverStateMachine.submersiveReplace(initGrounds, context.INPUT_UNIFY, pool);
-
-        // convert base to trues
-        initGrounds = ProverStateMachine.submersiveReplace(initGrounds, context.BASE_UNIFY, pool);
-
-        Cachet cachet = new Cachet(ruletta);
+        Set<Dob> initGrounds = PropNetFactory.prepareMachine(machine);
+        Cachet cachet = new Cachet(machine.rta);
         cachet.storeAllGround(initGrounds);
-        PropNet net = PropNetFactory.buildNet(ruletta, cachet, context);
-        Set<Dob> alwaysTrue = findAlwaysTrue(context, initGrounds);
-        return new PropNetStateMachine(net, context, alwaysTrue);
+        List<Rule> topRuleOrder = Topper.toList(machine.rta.ruleOrder);
+        PropNet net = PropNetFactory.buildNet(initGrounds, topRuleOrder, machine.rta.fortre.pool, cachet);
+        Set<Dob> alwaysTrue = findAlwaysTrue(machine, initGrounds);
+        return new PropNetStateMachine(net, machine, alwaysTrue);
     }
 
     /**

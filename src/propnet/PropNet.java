@@ -53,16 +53,17 @@ public class PropNet {
             prefixBuilder.append("\t");
         StringBuilder outBuilder = new StringBuilder();
         // negative case
-        outBuilder.append(prefixBuilder).append("[NOT]\n");
-        Preconditions.checkArgument(not.inputs.size() == 1 && not.inputs.get(0).fn == NodeFns.OR);
-        Node notOr = not.inputs.get(0);
+        outBuilder.append(prefixBuilder).append("[NOT]");
+        Preconditions.checkArgument(not.inputs.size() == 1 && not.inputs.iterator().next().fn == NodeFns.OR);
+        Node notOr = not.inputs.iterator().next();
+        outBuilder.append(" val: ").append(notOr.val).append("\n");
         Preconditions.checkArgument(notOr.inputs.size() > 0);
-        outBuilder.append(prefixBuilder).append("\t[OR]\n");
+        outBuilder.append(prefixBuilder).append("\t[OR]").append(" val: ").append(notOr.val).append("\n");
         for (Node orInput : notOr.inputs) {
             if (invProps.get(orInput) == null)
-                outBuilder.append(prefixBuilder).append("\t\t[NOT GROUND]\n");
+                outBuilder.append(prefixBuilder).append("\t\t[NOT GROUND]").append(" val: ").append(orInput.val).append("\n");
             else
-                outBuilder.append(prefixBuilder).append("\t\t[").append(invProps.get(orInput)).append("]\n");
+                outBuilder.append(prefixBuilder).append("\t\t[").append(invProps.get(orInput)).append("] val: ").append(orInput.val).append("\n");
         }
         return outBuilder;
     }
@@ -78,32 +79,32 @@ public class PropNet {
         for (Dob prop : props.keySet()) {
             Node node = props.get(prop);
             if (node.inputs.isEmpty()) {
-                output.append("[BASE: ").append(prop).append("]\n");
+                output.append("[BASE: ").append(prop).append(" val: ").append(props.get(prop).val).append("]\n");
             } else {
-                output.append("[INTERNAL: ").append(prop).append("]\n");
+                output.append("[INTERNAL: ").append(prop).append(" val: ").append(props.get(prop).val).append("]\n");
 
                 // special case when all negative
-                if (node.inputs.get(0).fn == NodeFns.NOT) {
-                    Node not = node.inputs.get(0);
+                if (node.inputs.iterator().next().fn == NodeFns.NOT) {
+                    Node not = node.inputs.iterator().next();
                     output.append(notString(not, invProps, 1));
                     continue;
                 }
 
-                Preconditions.checkArgument(node.inputs.get(0).fn == NodeFns.OR);
-                Node or = node.inputs.get(0);
+                Preconditions.checkArgument(node.inputs.iterator().next().fn == NodeFns.OR);
+                Node or = node.inputs.iterator().next();
 
                 // otherwise, it HAS to be an OR
-                output.append("\t[OR]\n");
+                output.append("\t[OR]").append(" val: ").append(or.val).append("\n");
                 // process each and
                 for (Node orIn : or.inputs) {
 
                     if (orIn.fn == NodeFns.AND) {
                         Node and = orIn;
-                        output.append("\t\t[AND]\n");
+                        output.append("\t\t[AND]").append(" val: ").append(props.get(prop).val).append("\n");
                         for (Node andInput : and.inputs) {
                             // this is a proposition
                             if (andInput.fn == NodeFns.OR) {
-                                output.append("\t\t\t[").append(invProps.get(andInput)).append("]\n");
+                                output.append("\t\t\t[").append(invProps.get(andInput)).append(" val: ").append(andInput.val).append("]\n");
                             } else if (andInput.fn == NodeFns.NOT) {
                                 // negative case
                                 Node not = andInput;

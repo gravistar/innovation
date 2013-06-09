@@ -32,7 +32,7 @@ public class NodeFns {
     // pretty unsafe. do the checking outside
     public static class notFn implements ValFn<Node> {
         public boolean eval(Collection<Node> inputs) {
-            return !inputs.iterator().next().val;
+            return !(inputs.iterator().next().val);
         }
     }
 

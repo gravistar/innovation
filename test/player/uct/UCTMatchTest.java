@@ -78,4 +78,18 @@ public class UCTMatchTest {
             match.run();
         }
     }
+
+    @Test
+    public void test5() {
+        int startclock = 1000, playclock = 1000;
+        List<Rule> rules = SimpleGames.getConnectFourFromFile();
+        Game.Config config = new Game.Config(startclock, playclock, rules);
+        EventBus bus = new EventBus();
+        int numTest = 20;
+        bus.register(new TestUtil.Tallier(Game.getRoles(rules), numTest));
+        for (int tt=0; tt<numTest; tt++) {
+            MatchRunnable match = Match.newBuilder(config).build().newRunnable(Lists.<Player>newArrayList(new UCTPropNetPlayer(), new UCTPlayer()), bus);
+            match.run();
+        }
+    }
 }

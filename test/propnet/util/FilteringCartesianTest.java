@@ -16,14 +16,35 @@ import static org.junit.Assert.assertEquals;
  * To change this template use File | Settings | File Templates.
  */
 public class FilteringCartesianTest {
+    @Test
+    public void test1Space() {
+        List<List<Integer>> subspaces = Lists.newArrayList();
+        List<Integer> subspace = Lists.newArrayList(1,2);
+        subspaces.add(subspace);
+        FilteringCartesianIterator.FilteringCartesianIterable<Integer> fci = new FilteringCartesianIterator.FilteringCartesianIterable<Integer>
+                (subspaces, new FilteringCartesianIterator.FilterFn<Integer>() {
+                    @Override
+                    public boolean pred(List<Integer> current, Integer x) {
+                        return true;  //To change body of implemented methods use File | Settings | File Templates.
+                    }
+                });
+
+        int count = 0;
+        for (List<Integer> x : fci) {
+            System.out.println("Element " + x);
+            count++;
+        }
+        assertEquals(2, count);
+    }
+
 
     @Test
     public void test1() {
 
         int spaces[][] = {
                 {1,2,3,4},
-                {1,2,3,4},
-                {1,2,3,4}
+                {5,6,7,8},
+                {9,10,11,12}
         };
 
         List<List<Integer>> subspaces = Lists.newArrayList();
@@ -50,4 +71,23 @@ public class FilteringCartesianTest {
 
         assertEquals(8, count);
     }
+
+    @Test
+    public void emptyTest(){
+        List<List<Integer>> subspaces = Lists.newArrayList();
+        FilteringCartesianIterator.FilteringCartesianIterable<Integer> fci = new
+                FilteringCartesianIterator.FilteringCartesianIterable<Integer>(subspaces,
+                new FilteringCartesianIterator.FilterFn<Integer>() {
+                    @Override
+                    public boolean pred(List<Integer> current, Integer x) {
+                        return x%2 == 0;
+                    }
+                });
+        int count = 0;
+        for (List<Integer> a : fci)
+            count++;
+        assertEquals(0, count);
+    }
+
+
 }

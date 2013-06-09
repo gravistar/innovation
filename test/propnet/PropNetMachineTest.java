@@ -1,5 +1,6 @@
 package propnet;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
@@ -42,6 +43,13 @@ public class PropNetMachineTest {
             stepThrough(rules);
     }
 
+    @Test
+    public void manyConnect4() {
+        List<Rule> rules = SimpleGames.getConnectFourFromFile();
+        for (int i=0; i<20; i++)
+            stepThrough(rules);
+    }
+
     public void stepThrough(List<Rule> rules) {
         BackwardStateMachine bsm = BackwardStateMachine.createForRules(rules);
         PropNetStateMachine pnsm = PropNetStateMachine.createPropNetStateMachine(rules);
@@ -62,6 +70,8 @@ public class PropNetMachineTest {
             System.out.println("[BSM STATE] " + bsmState);
             System.out.println("[PNSM STATE] " + pnsmState);
 
+            assertEquals(bsmState.size(), pnsmState.size());
+
             ListMultimap<Dob,Dob> bsmActions = bsm.getActions(bsmState);
             ListMultimap<Dob,Dob> pnsmActions = pnsm.getActions(pnsmState);
 
@@ -80,6 +90,10 @@ public class PropNetMachineTest {
                 List<Dob> bsmRoleActions = bsmActions.get(role);
                 List<Dob> pnsmRoleActions = pnsmActions.get(matchedRoles.get(role));
 
+
+                //System.out.println("bsm roles: " + bsmRoleActions);
+                //System.out.println("pnsm roles: " + pnsmRoleActions);
+
                 Map<Dob,Dob> matchedActions = matchDobList(bsmRoleActions, pnsmRoleActions);
 
                 assertTrue("mismatch between actions for role" + role, matchedActions.keySet().size() ==
@@ -96,6 +110,8 @@ public class PropNetMachineTest {
                 System.out.println("[PNSM ACTION] " + matchedActions.get(bsmRoleAction));
             }
 
+            System.out.println("[BSM TERMINAL] " + bsm.isTerminal(bsmState));
+            System.out.println("[PNSM TERMINAL] " + pnsm.isTerminal(pnsmState));
             assertTrue("mismatch between terminal!", bsm.isTerminal(bsmState) == pnsm.isTerminal(pnsmState));
             // check goals
             if (bsm.isTerminal(bsmState)) {
@@ -113,6 +129,8 @@ public class PropNetMachineTest {
 
             bsmState = bsm.nextState(bsmState, pickedBSMActions);
             pnsmState = pnsm.nextState(pnsmState, pickedPNSMActions);
+
+            System.out.println("Prop net: " + pnsm.net);
 
             System.out.println();
         }

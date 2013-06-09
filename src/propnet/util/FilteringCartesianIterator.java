@@ -35,7 +35,7 @@ public class FilteringCartesianIterator<T> implements Iterator<List<T>> {
 
     @Override
     public boolean hasNext() {
-        return currentSubspaces.size() == spaceSize;
+        return currentSubspaces.size() == spaceSize && spaceSize > 0;
     }
 
     @Override
@@ -61,12 +61,15 @@ public class FilteringCartesianIterator<T> implements Iterator<List<T>> {
 
     private void initialize() {
         Arrays.fill(positions,0);
+        if (fullSubspaces.isEmpty())
+            return;
         List<T> firstSubspace = filterSubspace(fullSubspaces.get(0));
         if (!firstSubspace.isEmpty()) {
             currentSubspaces.addLast(firstSubspace);
             current.addLast(firstSubspace.get(0));
         }
-        advance();
+        if (spaceSize > 1)
+            advance();
     }
 
     private void advance() {
@@ -90,30 +93,33 @@ public class FilteringCartesianIterator<T> implements Iterator<List<T>> {
 
         while (currentSubspaces.size() < spaceSize) {
             // nothing left
-            if (currentSubspaces.isEmpty())
+            if (currentSubspaces.isEmpty() && increment)
                 return;
 
             int subspaceIdx = currentSubspaces.size() - 1;
-            if (increment) {
+            if (increment)
                 positions[subspaceIdx]++;
-
-            }
             int elemIdx = positions[subspaceIdx];
+
             // backtrack
             if (elemIdx == currentSubspaces.getLast().size()) {
                 currentSubspaces.removeLast();
                 current.removeLast();
+                increment = true;
                 continue;
             }
-            current.removeLast();
-            current.addLast(currentSubspaces.getLast().get(positions[subspaceIdx]));
 
-            List<T> nextSubspace = filterSubspace(currentSubspaces.getLast());
+            current.removeLast();
+            current.addLast(currentSubspaces.getLast().get(elemIdx));
+
+            List<T> nextSubspace = filterSubspace(fullSubspaces.get(subspaceIdx+1));
             if (!nextSubspace.isEmpty()) {
                 currentSubspaces.add(nextSubspace);
                 positions[currentSubspaces.size()-1] = 0;
                 current.add(nextSubspace.get(0));
                 increment = false;
+            } else {
+                increment = true;
             }
         }
     }
@@ -126,4 +132,22 @@ public class FilteringCartesianIterator<T> implements Iterator<List<T>> {
                 ret.add(elem);
         return ret;
     }
+
+
+    public static class FilteringCartesianIterable<T> implements Iterable<List<T>> {
+
+        public final List<List<T>> subspaces;
+        public final FilterFn<T> filterFn;
+
+        public FilteringCartesianIterable(List<List<T>> subspaces, FilterFn<T> filterFn) {
+            this.subspaces = subspaces;
+            this.filterFn = filterFn;
+        }
+
+        @Override
+        public Iterator<List<T>> iterator() {
+            return new FilteringCartesianIterator<T>(subspaces, filterFn);
+        }
+    }
+
 }

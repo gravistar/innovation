@@ -59,7 +59,7 @@ public class PropNetTest {
                 neg = rule;
         }
 
-        //PropNetFactory.processAllNegativeBody(Preconditions.checkNotNull(neg), cachet, props, net);
+        //PropNetFactory.processRuleAllNegativeBody(Preconditions.checkNotNull(neg), cachet, props, net);
         //System.out.println("NEGATIVE TEST NET");
         //System.out.println(net);
     }
@@ -72,6 +72,7 @@ public class PropNetTest {
 
         System.out.println("==== LIGHTS ON NET ====");
         System.out.println(net);
+        PropNetFactory.checkDuplicateKeys(net);
     }
 
     @Test
@@ -81,7 +82,7 @@ public class PropNetTest {
         PropNet net = PropNetFactory.createFromRules(rules);
         System.out.println("==== CONNECT 4 NET ====");
         // too big
-        //System.out.println(net);
+        System.out.println(net);
     }
 
     @Test
@@ -90,6 +91,7 @@ public class PropNetTest {
         PropNet net = PropNetFactory.createFromRules(rules);
         System.out.println("==== Tic Tac Toe ====");
         System.out.println(net);
+        PropNetFactory.checkDuplicateKeys(net);
     }
 
 }

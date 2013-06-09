@@ -3,8 +3,7 @@ package propnet;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
-import java.util.Collection;
-import java.util.List;
+import java.util.Set;
 
 /**
  * Created with IntelliJ IDEA.
@@ -15,38 +14,40 @@ import java.util.List;
  * These are compared by reference equality.
  */
 public class Node {
-    public List<Node> inputs;
+    public Set<Node> inputs;
     public boolean val = false;
     public ValFn<Node> fn;
 
     public Node (ValFn<Node> fn) {
-        this(Lists.<Node>newArrayList(), fn);
+        this(Sets.<Node>newHashSet(), fn);
     }
 
-    public Node (List<Node> inputs, ValFn<Node> fn) {
+    public Node (Set<Node> inputs, ValFn<Node> fn) {
         this.inputs = inputs;
         this.fn = fn;
     }
 
     // | is because inputs may be empty and val already assigned true
     public boolean eval() {
-        return val |= fn.eval(inputs);
+        if (inputs.size() > 0)
+            val = fn.eval(inputs);
+        return val;
     }
 
     public static class NodeFactory {
-        public static Node makeAnd(List<Node> inputs) {
+        public static Node makeAnd(Set<Node> inputs) {
             return new Node(inputs, NodeFns.AND);
         }
 
-        public static Node makeOr(List<Node> inputs) {
+        public static Node makeOr(Set<Node> inputs) {
             return new Node(inputs, NodeFns.OR);
         }
 
-        public static Node makeNot(List<Node> inputs) {
+        public static Node makeNot(Set<Node> inputs) {
             return new Node(inputs, NodeFns.NOT);
         }
 
-        public static Node makeXor(List<Node> inputs) {
+        public static Node makeXor(Set<Node> inputs) {
             return new Node(inputs, NodeFns.XOR);
         }
 
