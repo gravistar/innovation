@@ -5,6 +5,7 @@ import com.google.common.collect.*;
 import propnet.Node;
 import propnet.PropNet;
 import propnet.PropNetFactory;
+import propnet.PropNetInterface;
 import rekkura.ggp.machina.BackwardStateMachine;
 import rekkura.ggp.machina.GgpStateMachine;
 import rekkura.ggp.machina.ProverStateMachine;
@@ -40,7 +41,7 @@ import java.util.Set;
  *
  */
 public class PropNetStateMachine implements GgpStateMachine{
-    public PropNet net;
+    public PropNetInterface net;
     public Map<Dob,Dob> nextToBase;
     public Map<Dob,Dob> legalToDoes;
     public Set<Dob> initBases;
@@ -52,7 +53,7 @@ public class PropNetStateMachine implements GgpStateMachine{
     public boolean verbose = false;
 
     // TODO: is there a better way to set up the latches? this might be ok though
-    private PropNetStateMachine(PropNet net, GameLogicContext context, Set<Dob> alwaysTrue) {
+    private PropNetStateMachine(PropNetInterface net, GameLogicContext context, Set<Dob> alwaysTrue) {
         this.net = net;
         this.context = context;
 
@@ -60,14 +61,14 @@ public class PropNetStateMachine implements GgpStateMachine{
         Colut.remove(alwaysTrue, context.TERMINAL);
 
         this.alwaysTrue = alwaysTrue;
-        legals = findDobs(net.props.keySet(), context.LEGAL);
-        goals = findDobs(net.props.keySet(), context.GOAL);
-        doeses = findDobs(net.props.keySet(), context.DOES);
+        legals = findDobs(net.props(), context.LEGAL);
+        goals = findDobs(net.props(), context.GOAL);
+        doeses = findDobs(net.props(), context.DOES);
 
-        Set<Dob> bases = findDobs(net.props.keySet(), context.TRUE);
-        Set<Dob> nexts = findDobs(net.props.keySet(), context.NEXT);
+        Set<Dob> bases = findDobs(net.props(), context.TRUE);
+        Set<Dob> nexts = findDobs(net.props(), context.NEXT);
 
-        initBases = findInitBases(net.props.keySet(), bases, context.INIT);
+        initBases = findInitBases(net.props(), bases, context.INIT);
         nextToBase = constructDobMapping(nexts, bases, nextBaseEquals);
         legalToDoes = constructDobMapping(legals, doeses, legalDoesEqual);
     }
@@ -201,7 +202,7 @@ public class PropNetStateMachine implements GgpStateMachine{
     public ListMultimap<Dob,Dob> extractLegals() {
         ListMultimap<Dob,Dob> ret = ArrayListMultimap.create();
         for (Dob legal : legals) {
-            if (net.props.get(legal).val) {
+            if (net.val(legal)) {
                 ret.put(legal.at(1), legalToDoes.get(legal));
             }
         }
@@ -220,7 +221,7 @@ public class PropNetStateMachine implements GgpStateMachine{
     public Set<Dob> extractTrues() {
         Set<Dob> ret = Sets.newHashSet();
         for (Dob truth : nextToBase.values())
-            if (net.props.get(truth).val)
+            if (net.val(truth))
                 ret.add(truth);
         return ret;
     }
@@ -228,7 +229,7 @@ public class PropNetStateMachine implements GgpStateMachine{
     public Set<Dob> extractNexts() {
         Set<Dob> ret = Sets.newHashSet();
         for (Dob next : nextToBase.keySet())
-            if (net.props.get(next).val) {
+            if (net.val(next)) {
                 Dob base = nextToBase.get(next);
                 ret.add(base);
             }
@@ -242,12 +243,12 @@ public class PropNetStateMachine implements GgpStateMachine{
 
     public void applyLatches() {
         for (Dob latch : alwaysTrue)
-            net.props.get(latch).val = true;
+            net.set(latch, true);
     }
 
     public void applyState(Set<Dob> state) {
         for (Dob truth : state)
-            net.props.get(truth).val = true;
+            net.set(truth, true);
     }
 
     public void applyActions(Map<Dob, Dob> actions) {
@@ -255,7 +256,7 @@ public class PropNetStateMachine implements GgpStateMachine{
             Dob action = actions.get(role);
             for (Dob does : doeses) {
                 if (Dob.compare(does, action) == 0)
-                    net.props.get(does).val = true;
+                    net.set(does, true);
             }
         }
     }
@@ -263,23 +264,11 @@ public class PropNetStateMachine implements GgpStateMachine{
     // just gives all the props that are true
     public Set<Dob> extractState() {
         Set<Dob> state = Sets.newHashSet();
-        for (Dob prop : net.props.keySet()) {
-            if (net.props.get(prop).val)
+        for (Dob prop : net.props()) {
+            if (net.val(prop))
                 state.add(prop);
         }
         return state;
-    }
-
-    // print props and values in topographic order
-    public static void printTopographicProps(PropNet net) {
-        Map<Node,Dob> invProp = net.invProps();
-        for (Node node : net.tnet) {
-            if (invProp.containsKey(node)) {
-                Dob prop = invProp.get(node);
-                System.out.println("[PROP " + prop + "] VALUE: " + node.val);
-            }
-        }
-        System.out.println();
     }
 
     // WARNING: this assumes isTerminal is used right
@@ -290,7 +279,7 @@ public class PropNetStateMachine implements GgpStateMachine{
         applyLatches();
         applyState(state);
         net.advance();
-        return net.props.get(context.TERMINAL).val;
+        return net.val(context.TERMINAL);
     }
 
     @Override
@@ -301,7 +290,7 @@ public class PropNetStateMachine implements GgpStateMachine{
     public Map<Dob, Integer> extractGoals() {
         Map<Dob,Integer> ret = Maps.newHashMap();
         for (Dob goal : goals) {
-            if (net.props.get(goal).val) {
+            if (net.val(goal)) {
                 Preconditions.checkArgument(goal.at(0) == context.GOAL);
                 Dob role = goal.at(1);
                 Dob value = goal.at(2);

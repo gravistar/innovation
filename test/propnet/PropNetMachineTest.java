@@ -11,7 +11,9 @@ import rekkura.ggp.machina.BackwardStateMachine;
 import rekkura.logic.model.Dob;
 import rekkura.logic.model.Rule;
 import rekkura.test.ggp.SimpleGames;
+import util.MachineTestUtil;
 
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
@@ -33,125 +35,56 @@ public class PropNetMachineTest {
     public void manyButtonsLights() {
         List<Rule> rules = SimpleGames.getButtonsAndLights();
         for (int i=0; i<20; i++)
-            stepThrough(rules);
+            MachineTestUtil.stepThrough(rules);
     }
 
     @Test
     public void manyTicTacToe() {
         List<Rule> rules = SimpleGames.getTicTacToeFromFile();
         for (int i=0; i<20; i++)
-            stepThrough(rules);
+            MachineTestUtil.stepThrough(rules);
     }
 
     @Test
     public void manyConnect4() {
         List<Rule> rules = SimpleGames.getConnectFourFromFile();
         for (int i=0; i<20; i++)
-            stepThrough(rules);
+            MachineTestUtil.stepThrough(rules);
     }
 
-    public void stepThrough(List<Rule> rules) {
-        BackwardStateMachine bsm = BackwardStateMachine.createForRules(rules);
-        PropNetStateMachine pnsm = PropNetStateMachine.createPropNetStateMachine(rules);
-
-        pnsm.printMappings();
-        System.out.println();
-
-        Set<Dob> bsmState = bsm.getInitial();
-        Set<Dob> pnsmState = pnsm.getInitial();
-
-        System.out.println();
-
-        boolean endGame = false;
-        int iteration = 1;
-        while (!endGame) {
-
-            System.out.println("[ITERATION " + iteration++ + "]");
-            System.out.println("[BSM STATE] " + bsmState);
-            System.out.println("[PNSM STATE] " + pnsmState);
-
-            assertEquals(bsmState.size(), pnsmState.size());
-
-            ListMultimap<Dob,Dob> bsmActions = bsm.getActions(bsmState);
-            ListMultimap<Dob,Dob> pnsmActions = pnsm.getActions(pnsmState);
-
-            List<Dob> bsmRoles = Lists.newArrayList(bsmActions.keySet());
-            List<Dob> pnsmRoles = Lists.newArrayList(pnsmActions.keySet());
-
-            Map<Dob,Dob> matchedRoles = matchDobList(bsmRoles, pnsmRoles);
-
-            assertTrue("mismatch between roles! pnsm: " + pnsmRoles + " bsm: " + bsmRoles, matchedRoles.keySet().size() == bsmRoles.size());
-
-            Map<Dob,Dob> pickedBSMActions = Maps.newHashMap();
-            Map<Dob,Dob> pickedPNSMActions = Maps.newHashMap();
-
-            for (Dob role : bsmRoles) {
-
-                List<Dob> bsmRoleActions = bsmActions.get(role);
-                List<Dob> pnsmRoleActions = pnsmActions.get(matchedRoles.get(role));
-
-
-                //System.out.println("bsm roles: " + bsmRoleActions);
-                //System.out.println("pnsm roles: " + pnsmRoleActions);
-
-                Map<Dob,Dob> matchedActions = matchDobList(bsmRoleActions, pnsmRoleActions);
-
-                assertTrue("mismatch between actions for role" + role, matchedActions.keySet().size() ==
-                        bsmRoleActions.size());
-
-                int actionId = rand.nextInt(bsmRoleActions.size());
-                Dob bsmRoleAction = bsmRoleActions.get(actionId);
-
-                // synchronized actions
-                pickedBSMActions.put(role, bsmRoleAction);
-                pickedPNSMActions.put(matchedRoles.get(role), matchedActions.get(bsmRoleAction));
-
-                System.out.println("[BSM ACTION] " + bsmRoleAction);
-                System.out.println("[PNSM ACTION] " + matchedActions.get(bsmRoleAction));
+    @Test
+    public void manyTestHuge() {
+        Set<String> skip = Sets.newHashSet("chess.kif", "chinesecheckers.kif", "chinesecheckers4.kif", "chinook.kif", "pentago.kif");
+        Set<String> mismatch = Sets.newHashSet("breakthrough.kif", "checkersbarrelnokings.kif", "chinook6x6.kif", "dualconnect4.kif",
+                                                "firesheep.kif", "hunter.kif");
+        String gamesDir = "/Users/david/Documents/ggp/rekkura2/test/rekkura/test/ggp/games/";
+        File gameDir = new File(gamesDir);
+        File[] files = gameDir.listFiles();
+        for (File gameFile : files) {
+            String gameName = gameFile.getAbsolutePath().substring(gamesDir.length());
+            if (skip.contains(gameName) || mismatch.contains(gameName)) {
+                System.out.println("Skipping " + gameName);
+                System.out.println();
+                continue;
             }
-
-            System.out.println("[BSM TERMINAL] " + bsm.isTerminal(bsmState));
-            System.out.println("[PNSM TERMINAL] " + pnsm.isTerminal(pnsmState));
-            assertTrue("mismatch between terminal!", bsm.isTerminal(bsmState) == pnsm.isTerminal(pnsmState));
-            // check goals
-            if (bsm.isTerminal(bsmState)) {
-
-                Map<Dob,Integer> bsmGoals = bsm.getGoals(bsmState);
-                Map<Dob,Integer> pnsmGoals = pnsm.getGoals(pnsmState);
-
-                for (Dob bsmRole : matchedRoles.keySet()) {
-                    Dob pnsmRole = matchedRoles.get(bsmRole);
-
-                    assertEquals(bsmGoals.get(bsmRole), pnsmGoals.get(pnsmRole));
-                }
-                break;
+            System.out.println("Attempting to propnet " + gameName);
+            List<Rule> rules = SimpleGames.getRulesForFile(gameFile.getAbsolutePath());
+            PropNet net = PropNetFactory.createFromRules(rules);
+            if (net == null) {
+                System.out.println("Build failed!");
+                continue;
+            } else {
+                System.out.println("Build succeeded! Net has " + net.props().size() +
+                        " props and " + net.tnet.size() + " total components!");
             }
-
-            bsmState = bsm.nextState(bsmState, pickedBSMActions);
-            pnsmState = pnsm.nextState(pnsmState, pickedPNSMActions);
-
-            System.out.println("Prop net: " + pnsm.net);
-
+            for (int i=0; i<10; i++)
+                MachineTestUtil.stepThrough(rules);
             System.out.println();
         }
     }
 
-    public Random rand = new Random();
 
-    public static Map<Dob,Dob> matchDobList(List<Dob> left, List<Dob> right) {
-        Map<Dob,Dob> ret = Maps.newHashMap();
-        Set<Dob> used = Sets.newHashSet();
-        for (Dob l : left) {
-            for (Dob r : right) {
-                if (Dob.compare(l, r) == 0 && !used.contains(r) && !used.contains(l)) {
-                    used.add(l);
-                    used.add(r);
-                    ret.put(l, r);
-                    break;
-                }
-            }
-        }
-        return ret;
-    }
+
+
 
 }

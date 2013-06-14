@@ -16,9 +16,9 @@ import java.util.Set;
  * Time: 10:17 AM
  * To change this template use File | Settings | File Templates.
  */
-public class PropNet {
+public class PropNet implements PropNetInterface{
     public List<Node> tnet; // nodes in topological order
-    public Map<Dob,Node> props;
+    private Map<Dob,Node> props;
     public Set<Dob> onBases = Sets.newHashSet(); // bases cache
 
     public PropNet(Map<Dob,Node> props, List<Node> net) {
@@ -36,14 +36,31 @@ public class PropNet {
         return ret;
     }
 
+    @Override
     public void wipe() {
         for (Node node : tnet)
             node.val = false;
     }
 
+    @Override
     public void advance() {
         for (Node node : tnet)
             node.eval();
+    }
+
+    @Override
+    public Set<Dob> props() {
+        return props.keySet();
+    }
+
+    @Override
+    public boolean val(Dob prop) {
+        return props.get(prop).val;
+    }
+
+    @Override
+    public void set(Dob prop, boolean val) {
+       props.get(prop).val = val;
     }
 
     // not ALWAYS has an or as input

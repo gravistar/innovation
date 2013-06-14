@@ -31,6 +31,7 @@ import java.util.Set;
 public class PropNetFactory {
 
     public static boolean debug = false;
+    public static int MAX_PROPS = 300000000;
 
     /**
      * @param rules
@@ -292,6 +293,12 @@ public class PropNetFactory {
 
         // now process the rules
         for (Rule rule : rules) {
+            // check if exceeded limit
+            if (groundings.size() > MAX_PROPS) {
+                System.out.println("[ERROR] PropNet is too large! Returning null");
+                return null;
+            }
+
             if (debug)
                 System.out.println("[DEBUG] Processing rule: " + rule);
 
@@ -370,10 +377,14 @@ public class PropNetFactory {
             int count = 0;
             for (List<Dob> unifyAsList : filteredUnifications) {
                 count++;
-                if (debug) {
+                // check if exceeded limit
+                if (groundings.size() > MAX_PROPS) {
+                    System.out.println("[ERROR] PropNet is too large! Returning null");
+                    return null;
+                }
+                if (debug)
                     if (count % 10000 == 0)
                         System.out.println("[DEBUG] Done processing " + count + " unifications");
-                }
                 Preconditions.checkArgument(unifyAsList.size() == vars.size());
                 // create unification
                 Map<Dob,Dob> unify = Maps.newHashMap();
@@ -392,13 +403,14 @@ public class PropNetFactory {
                     submergedBodies.add(newbody);
                 }
 
-
                 groundings.put(head, Sets.newHashSet(submergedBodies));
             }
 
             if (debug)
                 System.out.println();
         }
+
+        System.out.println("[DEBUG] Done generating groundings. Building net.");
 
         // process the combined grounded rules
         for (Dob head : groundings.keySet()) {
@@ -497,7 +509,7 @@ public class PropNetFactory {
 
     public static void checkDuplicateKeys(PropNet net) {
         Multiset<String> keys = HashMultiset.create();
-        for (Dob prop : net.props.keySet())
+        for (Dob prop : net.props())
             keys.add(prop.toString());
         for (String k : keys.elementSet()) {
             Preconditions.checkArgument(keys.count(k) == 1);
