@@ -33,7 +33,8 @@ public class UCTMatchTest {
         Game.Config config = new Game.Config(startclock, playclock, rules);
         EventBus bus = new EventBus();
         bus.register(new TestUtil.HistoryShower());
-        MatchRunnable match = Match.newBuilder(config).build().newRunnable(Lists.<Player>newArrayList(new UCTPlayer(), new MonteCarloPlayer()), bus);
+        MatchRunnable match = Match.newBuilder(config).build().newRunnable(Lists.<Player>newArrayList(
+                UCTPlayerFactory.createProverPlayer(), new MonteCarloPlayer()), bus);
         match.run();
     }
     
@@ -46,7 +47,8 @@ public class UCTMatchTest {
     	int numTest = 20;
     	bus.register(new TestUtil.Tallier(Game.getRoles(rules), numTest));
     	for (int tt=0; tt<numTest; tt++) {
-    		MatchRunnable match = Match.newBuilder(config).build().newRunnable(Lists.<Player>newArrayList(new UCTPlayer(), new MonteCarloPlayer()), bus);
+    		MatchRunnable match = Match.newBuilder(config).build().newRunnable(Lists.<Player>newArrayList(
+                    UCTPlayerFactory.createProverPlayer(), new MonteCarloPlayer()), bus);
     		match.run();
     	}
     }
@@ -60,7 +62,8 @@ public class UCTMatchTest {
     	int numTest = 20;
     	bus.register(new TestUtil.Tallier(Game.getRoles(rules), numTest));
     	for (int tt=0; tt<numTest; tt++) {
-    		MatchRunnable match = Match.newBuilder(config).build().newRunnable(Lists.<Player>newArrayList(new UCTPlayer(), new MonteCarloPlayer()), bus);
+    		MatchRunnable match = Match.newBuilder(config).build().newRunnable(Lists.<Player>newArrayList(
+                    UCTPlayerFactory.createProverPlayer(), new MonteCarloPlayer()), bus);
     		match.run();
     	}
     }
@@ -74,13 +77,14 @@ public class UCTMatchTest {
         int numTest = 20;
         bus.register(new TestUtil.Tallier(Game.getRoles(rules), numTest));
         for (int tt=0; tt<numTest; tt++) {
-            MatchRunnable match = Match.newBuilder(config).build().newRunnable(Lists.<Player>newArrayList(UCTPlayerFactory.createVanillaPropNetPlayer(), new UCTPlayer()), bus);
+            MatchRunnable match = Match.newBuilder(config).build().newRunnable(Lists.<Player>newArrayList(
+                    UCTPlayerFactory.createVanillaPropNetPlayer(), UCTPlayerFactory.createProverPlayer()), bus);
             match.run();
         }
     }
 
     @Test
-    public void test5() {
+    public void vanillaVsProverConnect4() {
         int startclock = 1000, playclock = 1000;
         List<Rule> rules = SimpleGames.getConnectFourFromFile();
         Game.Config config = new Game.Config(startclock, playclock, rules);
@@ -88,7 +92,23 @@ public class UCTMatchTest {
         int numTest = 20;
         bus.register(new TestUtil.Tallier(Game.getRoles(rules), numTest));
         for (int tt=0; tt<numTest; tt++) {
-            MatchRunnable match = Match.newBuilder(config).build().newRunnable(Lists.<Player>newArrayList(UCTPlayerFactory.createVanillaPropNetPlayer(), new UCTPlayer()), bus);
+            MatchRunnable match = Match.newBuilder(config).build().newRunnable(Lists.<Player>newArrayList(
+                    UCTPlayerFactory.createVanillaPropNetPlayer(), UCTPlayerFactory.createProverPlayer()), bus);
+            match.run();
+        }
+    }
+
+    @Test
+    public void nativeVsVanillaConnect4() {
+        int startclock = 1000, playclock = 1000;
+        List<Rule> rules = SimpleGames.getConnectFourFromFile();
+        Game.Config config = new Game.Config(startclock, playclock, rules);
+        EventBus bus = new EventBus();
+        int numTest = 20;
+        bus.register(new TestUtil.Tallier(Game.getRoles(rules), numTest));
+        for (int tt=0; tt<numTest; tt++) {
+            MatchRunnable match = Match.newBuilder(config).build().newRunnable(Lists.<Player>newArrayList(
+                    UCTPlayerFactory.createNativePropNetPlayer(), UCTPlayerFactory.createVanillaPropNetPlayer()), bus);
             match.run();
         }
     }

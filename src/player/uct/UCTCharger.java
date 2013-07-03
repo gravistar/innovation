@@ -112,7 +112,7 @@ class UCTCharger {
             }
 
             // discount the farther away we are
-            discMultiplier *= UCTPlayer.discFactor;
+            discMultiplier *= UCTStatics.discFactor;
         }
     }
 }

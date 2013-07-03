@@ -1,6 +1,5 @@
 package player.uct;
 
-import com.google.common.collect.Lists;
 import machina.PropNetStateMachine;
 
 /**
@@ -11,15 +10,8 @@ import machina.PropNetStateMachine;
  *      Subclasses of this (either Vanilla or Native) just need to provide how to build
  *      the propnet machine.
  */
-public abstract class UCTPropNetPlayer extends UCTPlayer2<PropNetStateMachine> {
-    private UCTCharger charger;
+public abstract class UCTPropNetPlayer extends UCTPlayer<PropNetStateMachine> {
 
-    protected final void plan() {
-        charger = new UCTCharger(Lists.newArrayList(machine.getActions(machine.getInitial()).keySet()));
-        System.out.println(getTag() + "Done building charger!");
-        System.out.println(getTag() + "Role: " + role);
-        explore();
-    }
 
     @Override
     protected void prepare() {

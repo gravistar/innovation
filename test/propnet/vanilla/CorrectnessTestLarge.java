@@ -22,10 +22,11 @@ import java.util.Set;
 public class CorrectnessTestLarge {
     @Test
     public void manyTestHuge() {
-        Set<String> skip = Sets.newHashSet("chess.kif", "chinesecheckers.kif", "chinesecheckers4.kif", "chinook6x6.kif", "chinook.kif", "firesheep.kif",
-                "checkersbarrelnokings.kif", "pentago.kif");
-        Set<String> mismatch = Sets.newHashSet();
-                //Sets.newHashSet("checkersbarrelnokings.kif", "chinook6x6.kif", "dualconnect4.kif", "firesheep.kif", "hunter.kif");
+        Set<String> skip = Sets.newHashSet("chess.kif", "chinesecheckers.kif", "chinesecheckers4.kif", "chinook.kif",
+                "firesheep.kif", "pentago.kif");
+        Set<String> mismatch = //Sets.newHashSet();
+                Sets.newHashSet("checkersbarrelnokings.kif", "chinook6x6.kif", "dualconnect4.kif",
+                        "jointbuttonsandlights.kif");
         String gamesDir = "/Users/david/Documents/ggp/rekkura2/test/rekkura/test/ggp/games/";
         File gameDir = new File(gamesDir);
         File[] files = gameDir.listFiles();

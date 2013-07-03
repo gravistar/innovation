@@ -29,7 +29,7 @@ import static org.junit.Assert.assertTrue;
  */
 public class MachineTestUtil {
     public static Random rand = new Random(System.currentTimeMillis());
-    public static boolean verbose = true;
+    public static boolean verbose = false;
 
     public static void stepThroughVanilla(List<Rule> rules) {
         stepThrough(rules, PropNetStateMachine.create(PropNetFactory.createForStateMachine(rules)));
@@ -50,7 +50,8 @@ public class MachineTestUtil {
         Set<Dob> bsmState = bsm.getInitial();
         Set<Dob> pnsmState = pnsm.getInitial();
 
-        pnsm.printMappings();
+        if (verbose)
+            pnsm.printMappings();
 
         boolean endGame = false;
         int iteration = 1;

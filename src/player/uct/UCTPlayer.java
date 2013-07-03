@@ -1,6 +1,7 @@
 package player.uct;
 
 import com.google.common.collect.Lists;
+import rekkura.ggp.machina.GgpStateMachine;
 import rekkura.ggp.milleu.Game;
 import rekkura.ggp.milleu.Player;
 import rekkura.logic.model.Dob;
@@ -10,42 +11,22 @@ import java.util.Random;
 import java.util.Set;
 
 /**
- * Created with IntelliJ IDEA.
  * User: david
- * Date: 5/18/13
- * Time: 11:09 PM
- *
- * This is a first stab at a UCT player. It will use the prover state machine first.
- * TODO: the UCT state caches and the UCT fire should be genericized.
- *
- *
- * For games of different sizes, I want to see how many UCT charges per second can be
- * dropped using the prover state machine.  I also want to see the confidence of the
- * moves selected for each of these different games.
+ * Date: 6/26/13
+ * Time: 10:32 AM
+ * Description:
+ *      Provides the depth charge performing for different uct players (native or vanilla)
+ * M: machine type
  */
-public class UCTPlayer extends Player.ProverBased{
-
-    public static Random rand = new Random();
-    public static final double discFactor = 0.999;
+public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateBased<M> {
     private static boolean verbose = true;
-    private static boolean fine = false;
 
-    private static String getTag() {
-        return "[UCT Vanilla]";
-    }
-
-    // gross
     private UCTCharger charger;
 
-    @Override
-    protected void plan() {
-    	charger = new UCTCharger(Lists.newArrayList(machine.getActions(machine.getInitial()).keySet()));
-        System.out.println(getTag() + " Role: " + role);
-        explore();
-    }
+    public abstract String getTag();
 
     @Override
-    protected void move() {
+    protected final void move() {
         explore();
     }
 
@@ -54,34 +35,39 @@ public class UCTPlayer extends Player.ProverBased{
         //To change body of implemented methods use File | Settings | File Templates.
     }
 
-    private void explore() {
-        setDecision(anyDecision());
+    protected final void plan() {
+        charger = new UCTCharger(Lists.newArrayList(machine.getActions(machine.getInitial()).keySet()));
+        System.out.println(getTag() + "Done building charger!");
+        System.out.println(getTag() + "Role: " + role);
+        explore();
+    }
 
+    public final void explore() {
+        setDecision(anyDecision());
         Game.Turn current = getTurn();
         Set<Dob> state = current.state;
         List<Dob> candidateActions = machine.getActions(state).get(role);
-        
+
         int chargeCount = 0;
         Dob selected = candidateActions.get(0);
         StateActionPair pair = new StateActionPair(state, selected);
-    	UCTCache roleCache = charger.actionCaches.get(role);
-    	
-    	// drop charges
+        UCTCache roleCache = charger.actionCaches.get(role);
+
         while(validState()) {
-        	chargeCount++;
-        	charger.fireAndReel(state, machine);
-        	selected = charger.bestMove(role, state, candidateActions);
+            chargeCount++;
+            charger.fireAndReel(state, machine);
+            selected = charger.bestMove(role, state, candidateActions);
             setDecision(current.turn, selected);
         }
-
         if (verbose) {
-            System.out.println(getTag() + " Charge Count: " + chargeCount + "]");
+            System.out.println(getTag() + " Charge count: " + chargeCount);
             System.out.println(getTag() + " State cache size: " + charger.sharedStateCache.size());
             if (roleCache.explored(state, selected)) {
-        	    System.out.println(getTag() + " Role " + role + " picked move " + selected + " with monte carlo goal score: " + roleCache.monteCarloScore(pair));
+                System.out.println(getTag() + " Role " + role + "] picked move " + selected +
+                        " with monte carlo goal score: " + roleCache.monteCarloScore(pair));
             }
             else
-        	    System.out.println(getTag() + "Role " + role + " no charges completed. picking random move.");
+                System.out.println(getTag() + " Role " + role + "] no charges completed. picking random move.");
             System.out.println();
         }
     }

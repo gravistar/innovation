@@ -76,6 +76,10 @@ public class PropNetStateMachine implements GgpStateMachine{
     }
 
     public static boolean isLatch(Dob latch, GameLogicContext context) {
+        if (latch.size() == 0) {
+            System.out.println("Weird latch: " + latch);
+            return true;
+        }
         if (latch.at(0).equals(context.INIT))
             return false;
         if (latch.at(0).equals(context.DOES))

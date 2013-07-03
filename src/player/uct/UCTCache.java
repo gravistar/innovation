@@ -26,7 +26,6 @@ class UCTCache {
     public Map<StateActionPair, Double> maxGoalScore = Maps.newHashMap();
     public Map<StateActionPair, Integer> timesTaken = Maps.newHashMap();
     public Map<Set<Dob>, Integer> timesVisited = Maps.newHashMap();
-    private static double C = 40;
 
     // For sharing a single state visited cache among multiple roles
     public UCTCache(Map<Set<Dob>, Integer> timesVisited) {
@@ -80,7 +79,8 @@ class UCTCache {
     public Dob bestAction(Set<Dob> state, List<Dob> candidateActions) {
     	Preconditions.checkArgument(!candidateActions.isEmpty());
     	double bestScore = -1.0;
-    	List<Dob> bestActions = Lists.newArrayList(randomAction(candidateActions));
+    	List<Dob> bestActions = Lists.newArrayList(
+                UCTStatics.randomAction(candidateActions));
     	
     	for (Dob action : candidateActions) {
     		StateActionPair key = new StateActionPair(state, action);
@@ -95,7 +95,7 @@ class UCTCache {
     			bestActions.add(action);
     		}
     	}
-   	    return randomAction(bestActions);
+   	    return UCTStatics.randomAction(bestActions);
     }
     
     /**
@@ -123,7 +123,7 @@ class UCTCache {
         }
 
         if (!unexplored.isEmpty())
-            return randomAction(unexplored);
+            return UCTStatics.randomAction(unexplored);
 
         // if we get here, every action has been explored
         double bestScore = -1.0;
@@ -138,11 +138,11 @@ class UCTCache {
                 bestActions.add(action);
             }
         }
-        return randomAction(bestActions);
+        return UCTStatics.randomAction(bestActions);
     }
 
     private double uctScore(StateActionPair saPair) {
-        return monteCarloScore(saPair) + C*uctBonus(saPair);
+        return monteCarloScore(saPair) + UCTStatics.C*uctBonus(saPair);
     }
 
     public double monteCarloScore(StateActionPair saPair) {
@@ -158,17 +158,7 @@ class UCTCache {
     	double UCTBonus = Math.sqrt(Math.log(timesVisitedState) / timesTaken.get(saPair));
     	return UCTBonus;
     }
-    
-    /**
-     * There should be a util for this.
-     * @param actions
-     * @return
-     */
-    private static Dob randomAction(List<Dob> actions) {
-        Preconditions.checkArgument(!actions.isEmpty());
-        return actions.get(UCTPlayer.rand.nextInt(actions.size()));
-    }
-    
+
     @Override
     public String toString() {
     	String prefix = "[UCT Cache]======\n";

@@ -21,8 +21,8 @@ import java.util.Set;
 public class PerfTest {
     @Test
     public void limitsTest() {
-        Set<String> skip = Sets.newHashSet("chinesecheckers.kif", "chinesecheckers4.kif", "chinook.kif",
-                "pentago.kif");
+        Set<String> skip = Sets.newHashSet("chess.kif", "chinesecheckers.kif", "chinesecheckers4.kif", "chinook.kif",
+                "firesheep.kif", "pentago.kif");
         String gamesDir = "/Users/david/Documents/ggp/rekkura2/test/rekkura/test/ggp/games/";
         File gameDir = new File(gamesDir);
         File[] files = gameDir.listFiles();
