@@ -5,14 +5,15 @@ import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import machina.PropNetStateMachine;
+import propnet.PropNetFactory;
+import propnet.nativecode.NativePropNet;
+import propnet.nativecode.NativePropNetFactory;
 import rekkura.ggp.machina.BackwardStateMachine;
 import rekkura.logic.model.Dob;
 import rekkura.logic.model.Rule;
+import rekkura.util.Colut;
 
-import java.util.List;
-import java.util.Map;
-import java.util.Random;
-import java.util.Set;
+import java.util.*;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -22,26 +23,48 @@ import static org.junit.Assert.assertTrue;
  * User: david
  * Date: 6/13/13
  * Time: 8:42 PM
- * To change this template use File | Settings | File Templates.
+ * Description:
+ *      This is the core correctness test.  Checks that the output of a propnet state machine
+ *      is the same as the backward prover state machine.
  */
 public class MachineTestUtil {
+    public static Random rand = new Random(System.currentTimeMillis());
+    public static boolean verbose = true;
 
-    public static void stepThrough(List<Rule> rules) {
+    public static void stepThroughVanilla(List<Rule> rules) {
+        stepThrough(rules, PropNetStateMachine.create(PropNetFactory.createForStateMachine(rules)));
+    }
+
+    public static void stepThroughNative(List<Rule> rules) {
+        stepThrough(rules, PropNetStateMachine.create(NativePropNetFactory.createForStateMachine(rules)));
+    }
+
+    /**
+     * The actual correctness comparison method
+     * @param rules
+     * @param pnsm
+     */
+    public static void stepThrough(List<Rule> rules, PropNetStateMachine pnsm) {
         BackwardStateMachine bsm = BackwardStateMachine.createForRules(rules);
-        PropNetStateMachine pnsm = PropNetStateMachine.createPropNetStateMachine(rules);
 
         Set<Dob> bsmState = bsm.getInitial();
         Set<Dob> pnsmState = pnsm.getInitial();
 
+        pnsm.printMappings();
+
         boolean endGame = false;
         int iteration = 1;
         while (!endGame) {
+            if (verbose) {
+                System.out.println("[ITERATION " + iteration++ + "]");
+                System.out.println("[BSM STATE] " + bsmState);
+                System.out.println("[PNSM STATE] " + pnsmState);
+            }
 
-            System.out.println("[ITERATION " + iteration++ + "]");
-            System.out.println("[BSM STATE] " + bsmState);
-            System.out.println("[PNSM STATE] " + pnsmState);
+            //System.out.println("PropNet: " + pnsm.net);
 
-            assertEquals(bsmState.size(), pnsmState.size());
+            // do the dobs in the states have the same name?
+            assertTrue("mismatch between state! pnsm: " + pnsmState + " bsm: " + bsmState, dobMatch(bsmState, pnsmState));
 
             ListMultimap<Dob,Dob> bsmActions = bsm.getActions(bsmState);
             ListMultimap<Dob,Dob> pnsmActions = pnsm.getActions(pnsmState);
@@ -51,38 +74,43 @@ public class MachineTestUtil {
 
             Map<Dob,Dob> matchedRoles = matchDobList(bsmRoles, pnsmRoles);
 
-            assertTrue("mismatch between roles! pnsm: " + pnsmRoles + " bsm: " + bsmRoles, matchedRoles.keySet().size() == bsmRoles.size());
+            // do the dobs in the roles have the same name?
+            assertTrue("mismatch between roles! pnsm: " + pnsmRoles + " bsm: " + bsmRoles, dobMatch(bsmRoles, pnsmRoles));
 
             Map<Dob,Dob> pickedBSMActions = Maps.newHashMap();
             Map<Dob,Dob> pickedPNSMActions = Maps.newHashMap();
 
             for (Dob role : bsmRoles) {
-
                 List<Dob> bsmRoleActions = bsmActions.get(role);
-                List<Dob> pnsmRoleActions = pnsmActions.get(matchedRoles.get(role));
 
-                //System.out.println("bsm roles: " + bsmRoleActions);
-                //System.out.println("pnsm roles: " + pnsmRoleActions);
+                // find matching action dob for the pnsm
+                List<Dob> pnsmRoleActions = pnsmActions.get(matchedRoles.get(role));
 
                 Map<Dob,Dob> matchedActions = matchDobList(bsmRoleActions, pnsmRoleActions);
 
+                // just need to check for size since the matching takes care of name comparison
                 assertTrue("mismatch between actions for role" + role, matchedActions.keySet().size() ==
                         bsmRoleActions.size());
 
                 int actionId = rand.nextInt(bsmRoleActions.size());
                 Dob bsmRoleAction = bsmRoleActions.get(actionId);
 
-                // synchronized actions
+                // make sure machines submit the same actions
                 pickedBSMActions.put(role, bsmRoleAction);
                 pickedPNSMActions.put(matchedRoles.get(role), matchedActions.get(bsmRoleAction));
 
-                System.out.println("[BSM ACTION] " + bsmRoleAction);
-                System.out.println("[PNSM ACTION] " + matchedActions.get(bsmRoleAction));
+                if (verbose) {
+                    System.out.println("[BSM ACTION] " + bsmRoleAction);
+                    System.out.println("[PNSM ACTION] " + matchedActions.get(bsmRoleAction));
+                }
             }
 
-            System.out.println("[BSM TERMINAL] " + bsm.isTerminal(bsmState));
-            System.out.println("[PNSM TERMINAL] " + pnsm.isTerminal(pnsmState));
+            if (verbose) {
+                System.out.println("[BSM TERMINAL] " + bsm.isTerminal(bsmState));
+                System.out.println("[PNSM TERMINAL] " + pnsm.isTerminal(pnsmState));
+            }
             assertTrue("mismatch between terminal!", bsm.isTerminal(bsmState) == pnsm.isTerminal(pnsmState));
+
             // check goals
             if (bsm.isTerminal(bsmState)) {
 
@@ -100,8 +128,20 @@ public class MachineTestUtil {
             bsmState = bsm.nextState(bsmState, pickedBSMActions);
             pnsmState = pnsm.nextState(pnsmState, pickedPNSMActions);
 
-            System.out.println();
+            if (verbose)
+                System.out.println();
         }
+    }
+
+    // Utility matching methods
+    public static boolean dobMatch(Collection<Dob> lhs, Collection<Dob> rhs) {
+        Set<String> l = Sets.newHashSet();
+        for (Dob d : lhs)
+            l.add(d.toString());
+        Set<String> r = Sets.newHashSet();
+        for (Dob d : rhs)
+            r.add(d.toString());
+        return  Colut.containsSame(l, r);
     }
 
     public static Map<Dob,Dob> matchDobList(List<Dob> left, List<Dob> right) {
@@ -119,7 +159,4 @@ public class MachineTestUtil {
         }
         return ret;
     }
-
-    public static Random rand = new Random();
-
 }

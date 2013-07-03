@@ -1,23 +1,18 @@
 package machina;
 
 import com.google.common.base.Preconditions;
-import com.google.common.collect.*;
-import propnet.Node;
-import propnet.PropNet;
+import com.google.common.collect.ArrayListMultimap;
+import com.google.common.collect.ListMultimap;
+import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import propnet.PropNetFactory;
 import propnet.PropNetInterface;
-import rekkura.ggp.machina.BackwardStateMachine;
+import propnet.util.Tuple2;
 import rekkura.ggp.machina.GgpStateMachine;
-import rekkura.ggp.machina.ProverStateMachine;
 import rekkura.ggp.milleu.GameLogicContext;
-import rekkura.logic.algorithm.Unifier;
 import rekkura.logic.model.Dob;
 import rekkura.logic.model.Rule;
-import rekkura.logic.prover.StratifiedProver;
-import rekkura.logic.structure.Cachet;
 import rekkura.logic.structure.Pool;
-import rekkura.logic.structure.Ruletta;
-import rekkura.state.algorithm.Topper;
 import rekkura.util.Colut;
 
 import java.util.List;
@@ -25,12 +20,11 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Created with IntelliJ IDEA.
  * User: david
  * Date: 5/31/13
  * Time: 8:12 PM
- *
- * A simple in-memory propnet state machine.
+ * Description:
+ *      A state machine that is backed by a PropNetInterface. It can use either native or vanilla.
  * Note: doeses and legals separate
  *       bases and nexts separate
  * This is done to keep the propnet a DAG.  This shouldn't be bad because
@@ -52,15 +46,10 @@ public class PropNetStateMachine implements GgpStateMachine{
     public GameLogicContext context;
     public boolean verbose = false;
 
-    // TODO: is there a better way to set up the latches? this might be ok though
-    private PropNetStateMachine(PropNetInterface net, GameLogicContext context, Set<Dob> alwaysTrue) {
+    private PropNetStateMachine(PropNetInterface net, GameLogicContext context) {
         this.net = net;
         this.context = context;
-
-        // setup all these things
-        Colut.remove(alwaysTrue, context.TERMINAL);
-
-        this.alwaysTrue = alwaysTrue;
+        this.alwaysTrue = getSubmerged(filterLatches(Rule.ruleHeads(context.staticRules), context), net.props());
         legals = findDobs(net.props(), context.LEGAL);
         goals = findDobs(net.props(), context.GOAL);
         doeses = findDobs(net.props(), context.DOES);
@@ -85,6 +74,37 @@ public class PropNetStateMachine implements GgpStateMachine{
 
     public static interface DobEqualsFn {
         public boolean equals(Dob left, Dob right);
+    }
+
+    public static boolean isLatch(Dob latch, GameLogicContext context) {
+        if (latch.at(0).equals(context.INIT))
+            return false;
+        if (latch.at(0).equals(context.DOES))
+            return false;
+        if (latch.at(0).equals(context.BASE))
+            return false;
+        return true;
+    }
+
+    public static Set<Dob> filterLatches(Set<Dob> latches, GameLogicContext context) {
+        Set<Dob> ret = Sets.newHashSet();
+        for (Dob latch : latches) {
+            if (isLatch(latch, context))
+                ret.add(latch);
+        }
+        return ret;
+    }
+
+    public static Set<Dob> getSubmerged(Iterable<Dob> toFind, Set<Dob> findFrom) {
+        Map<String, Dob> names = Maps.newHashMap();
+        for (Dob d : findFrom)
+            names.put(d.toString(), d);
+
+        Set<Dob> ret = Sets.newHashSet();
+        for (Dob d : toFind)
+            if (names.containsKey(d.toString()))
+                ret.add(names.get(d.toString()));
+        return ret;
     }
 
     public static DobEqualsFn nextBaseEquals = new DobEqualsFn() {
@@ -150,35 +170,24 @@ public class PropNetStateMachine implements GgpStateMachine{
     }
 
     /**
-     * This is gross because code is duplicated with PropNetFactory.createFromRules
-     * but unfortunately java doesn't have pattern matching
      * @param rules
      * @return
      */
-    public static PropNetStateMachine createPropNetStateMachine(List<Rule> rules) {
-        BackwardStateMachine machine = BackwardStateMachine.createForRules(rules);
-        Set<Dob> initGrounds = PropNetFactory.prepareMachine(machine);
-        Cachet cachet = new Cachet(machine.rta);
-        cachet.storeAllGround(initGrounds);
-        List<Rule> topRuleOrder = Topper.toList(machine.rta.ruleOrder);
-        PropNet net = PropNetFactory.buildNet(initGrounds, topRuleOrder, machine.rta.fortre.pool, cachet);
-        Set<Dob> alwaysTrue = findAlwaysTrue(machine, initGrounds);
-        return new PropNetStateMachine(net, machine, alwaysTrue);
+    public static PropNetStateMachine fromRules(List<Rule> rules) {
+        return create(PropNetFactory.createForStateMachine(rules));
     }
 
     /**
-     * alwaysTrue = InitGrounds - {terminal} - {init} - {true} - {does} - {goal}
-     * @param initGrounds
+     * Create a pnsm from required components
+     * @param param
      * @return
      */
-    public static Set<Dob> findAlwaysTrue(GameLogicContext context, Set<Dob> initGrounds) {
-        Set<Dob> alwaysTrue = initGrounds;
-        alwaysTrue = Colut.difference(alwaysTrue, findDobs(initGrounds, context.TERMINAL));
-        alwaysTrue = Colut.difference(alwaysTrue, findDobs(initGrounds, context.INIT));
-        alwaysTrue = Colut.difference(alwaysTrue, findDobs(initGrounds, context.TRUE));
-        alwaysTrue = Colut.difference(alwaysTrue, findDobs(initGrounds, context.DOES));
-        alwaysTrue = Colut.difference(alwaysTrue, findDobs(initGrounds, context.GOAL));
-        return alwaysTrue;
+    public static PropNetStateMachine create(Tuple2<PropNetInterface, GameLogicContext> param) {
+        PropNetInterface net = param._1;
+        GameLogicContext context = param._2;
+        Preconditions.checkNotNull(net);
+        Preconditions.checkNotNull(context);
+        return new PropNetStateMachine(net, context);
     }
 
     @Override
@@ -192,10 +201,7 @@ public class PropNetStateMachine implements GgpStateMachine{
 
     @Override
     public ListMultimap<Dob, Dob> getActions(Set<Dob> state) {
-        net.wipe();
-        applyLatches();
-        applyState(state);
-        net.advance();
+        advance(state, Maps.<Dob,Dob>newHashMap());
         return extractLegals();
     }
 
@@ -209,13 +215,12 @@ public class PropNetStateMachine implements GgpStateMachine{
         return ret;
     }
 
-    public Set<Dob> advance(Set<Dob> state, Map<Dob,Dob> actions) {
+    public void advance(Set<Dob> state, Map<Dob,Dob> actions) {
         net.wipe();
         applyLatches();
         applyState(state);
         applyActions(actions);
         net.advance();
-        return extractNexts();
     }
 
     public Set<Dob> extractTrues() {
@@ -238,7 +243,8 @@ public class PropNetStateMachine implements GgpStateMachine{
 
     @Override
     public Set<Dob> nextState(Set<Dob> state, Map<Dob, Dob> actions) {
-        return advance(state, actions);
+        advance(state, actions);
+        return extractNexts();
     }
 
     public void applyLatches() {
@@ -261,24 +267,9 @@ public class PropNetStateMachine implements GgpStateMachine{
         }
     }
 
-    // just gives all the props that are true
-    public Set<Dob> extractState() {
-        Set<Dob> state = Sets.newHashSet();
-        for (Dob prop : net.props()) {
-            if (net.val(prop))
-                state.add(prop);
-        }
-        return state;
-    }
-
-    // WARNING: this assumes isTerminal is used right
-    // isTerminal(state) -> state = nextState(state,actions) -> isTerminal(state)
     @Override
     public boolean isTerminal(Set<Dob> state) {
-        net.wipe();
-        applyLatches();
-        applyState(state);
-        net.advance();
+        advance(state, Maps.<Dob,Dob>newHashMap());
         return net.val(context.TERMINAL);
     }
 

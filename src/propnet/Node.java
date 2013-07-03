@@ -1,5 +1,6 @@
 package propnet;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 
@@ -10,8 +11,9 @@ import java.util.Set;
  * User: david
  * Date: 5/25/13
  * Time: 11:06 AM
- *
- * These are compared by reference equality.
+ * Description:
+ *      Nodes are compared by reference equality.
+ *      To clear the node, just set its val to false.
  */
 public class Node {
     public Set<Node> inputs;
@@ -27,10 +29,11 @@ public class Node {
         this.fn = fn;
     }
 
-    // | is because inputs may be empty and val already assigned true
+    // has side effect of setting val
     public boolean eval() {
-        if (inputs.size() > 0)
-            val = fn.eval(inputs);
+        if (inputs.isEmpty())
+            return val;
+        val = fn.eval(inputs);
         return val;
     }
 

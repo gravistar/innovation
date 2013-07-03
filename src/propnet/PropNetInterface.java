@@ -2,7 +2,6 @@ package propnet;
 
 import rekkura.logic.model.Dob;
 
-import java.util.Map;
 import java.util.Set;
 
 /**
@@ -18,4 +17,5 @@ public interface PropNetInterface {
     public Set<Dob> props();
     public boolean val(Dob prop);
     public void set(Dob prop, boolean val);
+    public long size();
 }

@@ -1,7 +1,13 @@
 package util;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.collect.Sets;
 import com.google.common.eventbus.Subscribe;
+import propnet.Node;
+import propnet.PropNet;
+import propnet.ValFn;
+import propnet.util.Tuple2;
 import rekkura.ggp.milleu.Game;
 import rekkura.ggp.milleu.MatchRunnable;
 import rekkura.logic.model.Dob;
@@ -17,6 +23,25 @@ import java.util.Map;
  * To change this template use File | Settings | File Templates.
  */
 public class TestUtil {
+
+
+    /**
+     * Gives a disconnected propnet with same val fn
+     * @param fn
+     * @return
+     */
+    public static PropNet uniformDiscVanilla(int sz, ValFn<Node> fn) {
+        List<Node> topo = Lists.newArrayList();
+        Map<Dob,Node> props = Maps.newHashMap();
+        for (int i=0; i<sz; i++) {
+            Node toAdd = new Node(fn);
+            Dob toAddProp = new Dob();
+            topo.add(toAdd);
+            props.put(toAddProp, toAdd);
+        }
+        return new PropNet(props, topo);
+    }
+
     public static class Tallier {
         public Map<Dob, Integer> wins = Maps.newHashMap();
         public int total = 0;

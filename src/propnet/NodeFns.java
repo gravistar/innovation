@@ -4,11 +4,13 @@ import java.util.Collection;
 import java.util.Iterator;
 
 /**
-* Created with IntelliJ IDEA.
 * User: david
 * Date: 5/25/13
 * Time: 12:42 PM
-* To change this template use File | Settings | File Templates.
+* Description:
+*      These functions are only well defined when number of inputs is correct
+*          ( > 0 for andFn and orFn and exactly 1 for notFn)
+*      It's up to the caller to check these conditions.
 */
 public class NodeFns {
     public static class andFn implements ValFn<Node> {

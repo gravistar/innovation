@@ -10,16 +10,15 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * Created with IntelliJ IDEA.
  * User: david
  * Date: 5/30/13
  * Time: 10:17 AM
- * To change this template use File | Settings | File Templates.
+ * Description:
+ *      A vanilla, in-Java propnet
  */
 public class PropNet implements PropNetInterface{
     public List<Node> tnet; // nodes in topological order
-    private Map<Dob,Node> props;
-    public Set<Dob> onBases = Sets.newHashSet(); // bases cache
+    public Map<Dob,Node> props;
 
     public PropNet(Map<Dob,Node> props, List<Node> net) {
         this.tnet = net;
@@ -33,6 +32,13 @@ public class PropNet implements PropNetInterface{
             Preconditions.checkArgument(!ret.containsKey(node));
             ret.put(node, prop);
         }
+        return ret;
+    }
+
+    public Map<Node,Integer> indices() {
+        Map<Node,Integer> ret = Maps.newHashMapWithExpectedSize(tnet.size());
+        for (int i=0; i<tnet.size(); i++)
+            ret.put(tnet.get(i), i);
         return ret;
     }
 
@@ -60,7 +66,12 @@ public class PropNet implements PropNetInterface{
 
     @Override
     public void set(Dob prop, boolean val) {
-       props.get(prop).val = val;
+        props.get(prop).val = val;
+    }
+
+    @Override
+    public long size() {
+        return tnet.size();
     }
 
     // not ALWAYS has an or as input

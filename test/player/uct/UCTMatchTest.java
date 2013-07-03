@@ -74,7 +74,7 @@ public class UCTMatchTest {
         int numTest = 20;
         bus.register(new TestUtil.Tallier(Game.getRoles(rules), numTest));
         for (int tt=0; tt<numTest; tt++) {
-            MatchRunnable match = Match.newBuilder(config).build().newRunnable(Lists.<Player>newArrayList(new UCTPropNetPlayer(), new UCTPlayer()), bus);
+            MatchRunnable match = Match.newBuilder(config).build().newRunnable(Lists.<Player>newArrayList(UCTPlayerFactory.createVanillaPropNetPlayer(), new UCTPlayer()), bus);
             match.run();
         }
     }
@@ -88,7 +88,7 @@ public class UCTMatchTest {
         int numTest = 20;
         bus.register(new TestUtil.Tallier(Game.getRoles(rules), numTest));
         for (int tt=0; tt<numTest; tt++) {
-            MatchRunnable match = Match.newBuilder(config).build().newRunnable(Lists.<Player>newArrayList(new UCTPropNetPlayer(), new UCTPlayer()), bus);
+            MatchRunnable match = Match.newBuilder(config).build().newRunnable(Lists.<Player>newArrayList(UCTPlayerFactory.createVanillaPropNetPlayer(), new UCTPlayer()), bus);
             match.run();
         }
     }
