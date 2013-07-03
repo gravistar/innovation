@@ -22,14 +22,16 @@ import java.util.Set;
  * Date: 6/14/13
  * Time: 11:11 AM
  * Description:
- *      For a set of rules, generates all the valid groundings
+ *      For a set of rules, generates all the valid groundings. Makes sure to cache them in the
+ *      pool and the cachet.
  */
 public class Grounder {
 
     private static boolean debug = false;
     private static long MAX_PROPS = 300000000;
 
-    public static SetMultimap<Dob,Set<Atom>> getValidGroundings(List<Rule> rules, final Pool pool, Cachet cachet) {
+    public static SetMultimap<Dob,Set<Atom>> getValidGroundings(List<Rule> rules, final Pool pool,
+                                                                Cachet cachet) {
         SetMultimap<Dob, Set<Atom>> groundings = HashMultimap.create(); // head -> all atoms
 
         // now process the rules
@@ -144,6 +146,10 @@ public class Grounder {
                     Preconditions.checkNotNull(newbody);
                     submergedBodies.add(newbody);
                 }
+                if (debug) {
+                    System.out.println("[DEBUG] adding head: " + head);
+                    System.out.println("[DEBUG] \twith bodies: " + submergedBodies);
+                }
                 groundings.put(head, Sets.newHashSet(submergedBodies));
             }
 
@@ -238,6 +244,8 @@ public class Grounder {
         return ret;
     }
 
+
+    // fuck forgot to handle the one variable case
     public static boolean validDistinct(Map<Dob,Dob> unify, Rule rule, Collection<Dob> vars) {
         List<Rule.Distinct> distinct = rule.distinct;
         if (distinct.size() == 0)
@@ -246,8 +254,7 @@ public class Grounder {
             Dob first = entry.first;
             Dob second = entry.second;
 
-
-            // only can fail if both distincts have been assigned
+            // two variable case
             if (Colut.contains(vars, first) &&
                 unify.containsKey(first) &&
                 Colut.contains(vars, second) &&
@@ -257,6 +264,19 @@ public class Grounder {
 
                 if (first == second)
                     return false;
+                continue;
+            }
+
+            // one variable case
+            if (Colut.contains(vars, first) || Colut.contains(vars, second)) {
+                Dob var = Colut.contains(vars, first) ? first : second;
+                Dob diff = Colut.contains(vars, first) ? second : first;
+                if (!unify.containsKey(var))
+                    continue;
+                Dob val = unify.get(var);
+                if (val == diff)
+                    return false;
+                continue;
             }
         }
         return true;

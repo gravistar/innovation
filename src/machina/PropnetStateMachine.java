@@ -12,7 +12,6 @@ import rekkura.ggp.machina.GgpStateMachine;
 import rekkura.ggp.milleu.GameLogicContext;
 import rekkura.logic.model.Dob;
 import rekkura.logic.model.Rule;
-import rekkura.logic.structure.Pool;
 import rekkura.util.Colut;
 
 import java.util.List;

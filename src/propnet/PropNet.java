@@ -107,9 +107,9 @@ public class PropNet implements PropNetInterface{
         for (Dob prop : props.keySet()) {
             Node node = props.get(prop);
             if (node.inputs.isEmpty()) {
-                output.append("[BASE: ").append(prop).append(" val: ").append(props.get(prop).val).append("]\n");
+                output.append("[BASE: ").append(prop).append(" val: ").append(node.val).append("]\n");
             } else {
-                output.append("[INTERNAL: ").append(prop).append(" val: ").append(props.get(prop).val).append("]\n");
+                output.append("[INTERNAL: ").append(prop).append(" val: ").append(node.val).append("]\n");
 
                 // special case when all negative
                 if (node.inputs.iterator().next().fn == NodeFns.NOT) {
@@ -128,7 +128,7 @@ public class PropNet implements PropNetInterface{
 
                     if (orIn.fn == NodeFns.AND) {
                         Node and = orIn;
-                        output.append("\t\t[AND]").append(" val: ").append(props.get(prop).val).append("\n");
+                        output.append("\t\t[AND]").append(" val: ").append(and.val).append("\n");
                         for (Node andInput : and.inputs) {
                             // this is a proposition
                             if (andInput.fn == NodeFns.OR) {

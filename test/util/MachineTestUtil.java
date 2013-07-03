@@ -61,8 +61,6 @@ public class MachineTestUtil {
                 System.out.println("[PNSM STATE] " + pnsmState);
             }
 
-            //System.out.println("PropNet: " + pnsm.net);
-
             // do the dobs in the states have the same name?
             assertTrue("mismatch between state! pnsm: " + pnsmState + " bsm: " + bsmState, dobMatch(bsmState, pnsmState));
 
