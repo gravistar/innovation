@@ -23,9 +23,13 @@ import java.util.*;
  * Time: 9:31 PM
  * Description:
  *      Generates a native propnet. Output files include a .java, .c, .jnilib and .class file.
- * To change this template use File | Settings | File Templates.
  */
 public class NativePropNetFactory {
+
+    // Setup java.library.path
+    static {
+        NativeUtil.setupLibraryPath();
+    }
 
     public static Random rand = new Random(System.currentTimeMillis());
     public static boolean debug = false;

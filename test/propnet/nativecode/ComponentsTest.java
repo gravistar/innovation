@@ -1,6 +1,6 @@
 package propnet.nativecode;
 
-import org.junit.Test;
+import org.junit.*;
 import propnet.Node;
 import propnet.NodeFns;
 import propnet.PropNet;
@@ -21,6 +21,17 @@ import static org.junit.Assert.assertTrue;
  *      Need to set the java.library.path
  */
 public class ComponentsTest {
+
+    @BeforeClass
+    public static void before() {
+        NativeUtil.setupLibraryPath();
+    }
+
+    @AfterClass
+    public static void after() {
+        NativeUtil.deleteGeneratedFiles();
+    }
+
     @Test
     public void testOr() {
         PropNet vanilla = TestUtil.uniformDiscVanilla(Byte.SIZE + 1, NodeFns.OR);

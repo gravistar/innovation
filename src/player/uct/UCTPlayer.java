@@ -30,11 +30,6 @@ public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateB
         explore();
     }
 
-    @Override
-    protected void reflect() {
-        //To change body of implemented methods use File | Settings | File Templates.
-    }
-
     protected final void plan() {
         charger = new UCTCharger(Lists.newArrayList(machine.getActions(machine.getInitial()).keySet()));
         System.out.println(getTag() + "Done building charger!");

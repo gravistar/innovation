@@ -1,11 +1,14 @@
 package propnet.nativecode;
 
+import java.io.IOException;
+import java.lang.reflect.Field;
+
 /**
  * User: david
  * Date: 6/17/13
  * Time: 8:12 AM
  * Description:
- *      Some functions for debugging
+ *      Some functions for management and debugging
  */
 public class NativeUtil {
 
@@ -21,6 +24,26 @@ public class NativeUtil {
             System.out.print(" ");
         }
         System.out.println();
+    }
+
+    public static void deleteGeneratedFiles() {
+        try {
+            Runtime.getRuntime().exec("bash clear.sh");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public static void setupLibraryPath() {
+        System.setProperty( "java.library.path", "compiled/lib" );
+
+        try {
+            Field fieldSysPath = ClassLoader.class.getDeclaredField( "sys_paths" );
+            fieldSysPath.setAccessible( true );
+            fieldSysPath.set( null, null );
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
 }

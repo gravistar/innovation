@@ -4,6 +4,7 @@ import com.google.common.collect.Lists;
 import machina.PropNetStateMachine;
 import propnet.PropNetFactory;
 import propnet.nativecode.NativePropNetFactory;
+import propnet.nativecode.NativeUtil;
 import rekkura.ggp.machina.BackwardStateMachine;
 import rekkura.logic.model.Rule;
 
@@ -37,6 +38,11 @@ public class UCTPlayerFactory {
                 this.role = machine.prover.pool.dobs.submerge(role);
                 plan();
             }
+
+            @Override
+            protected void reflect() {
+                // does nothing
+            }
         };
     }
 
@@ -52,10 +58,14 @@ public class UCTPlayerFactory {
                 List<Rule> asList = Lists.newArrayList(rules);
                 return PropNetStateMachine.create(PropNetFactory.createForStateMachine(asList));
             }
+
+            @Override
+            protected void reflect() {
+                // does nothing
+            }
         };
     }
 
-    // reflect should have cleanup?
     public static UCTPropNetPlayer createNativePropNetPlayer() {
         return new UCTPropNetPlayer() {
             @Override
@@ -67,6 +77,12 @@ public class UCTPlayerFactory {
             protected PropNetStateMachine constructMachine(Collection<Rule> rules) {
                 List<Rule> asList = Lists.newArrayList(rules);
                 return PropNetStateMachine.create(NativePropNetFactory.createForStateMachine(asList));
+            }
+
+            @Override
+            protected void reflect() {
+                // cleanup
+                NativeUtil.deleteGeneratedFiles();
             }
         };
     }
