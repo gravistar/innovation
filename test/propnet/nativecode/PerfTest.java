@@ -1,4 +1,4 @@
-package propnet.vanilla;
+package propnet.nativecode;
 
 import propnet.AbstractPerfTest;
 import propnet.PropNetInterface;
@@ -12,14 +12,13 @@ import java.util.concurrent.Callable;
 
 /**
  * User: david
- * Date: 6/28/13
- * Time: 1:15 PM
+ * Date: 7/4/13
+ * Time: 9:39 PM
  * Description:
- *      Perf test with vanilla propnet
- *
- *      Make sure the heap space is 4G
+ *      PerfTest with native propnet
  */
 public class PerfTest extends AbstractPerfTest{
+
     @Override
     public Callable<Tuple2<Long, Long>> getBuildTask(File gameFile, Set<String> failed) {
         return defaultBuildTask(gameFile, failed);
@@ -27,9 +26,11 @@ public class PerfTest extends AbstractPerfTest{
 
     @Override
     public PropNetInterface getPropNet(List<Rule> rules) {
-        return PropNetFactory.createFromRulesOnlyNet(rules);
+        return NativePropNetFactory.createFromRules(rules)._1;
     }
 
     @Override
-    public void cleanup(){}
+    public void cleanup() {
+        NativeUtil.deleteGeneratedFiles();
+    }
 }

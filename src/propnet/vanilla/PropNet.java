@@ -1,8 +1,10 @@
-package propnet;
+package propnet.vanilla;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
+import propnet.PropNetInterface;
+import propnet.vanilla.core.Node;
+import propnet.vanilla.core.NodeFns;
 import rekkura.logic.model.Dob;
 
 import java.util.List;
@@ -16,7 +18,7 @@ import java.util.Set;
  * Description:
  *      A vanilla, in-Java propnet
  */
-public class PropNet implements PropNetInterface{
+public class PropNet implements PropNetInterface {
     public List<Node> tnet; // nodes in topological order
     public Map<Dob,Node> props;
 

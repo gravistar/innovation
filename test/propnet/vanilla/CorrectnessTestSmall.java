@@ -35,4 +35,15 @@ public class CorrectnessTestSmall {
         for (int i=0; i<20; i++)
             MachineTestUtil.stepThroughVanilla(rules);
     }
+
+    @Test
+    public void manyPilgrimage() {
+        String gameName = "pilgrimage.kif";
+        String abs = Statics.gamesDir + gameName;
+        List<Rule> rules = SimpleGames.getRulesForFile(abs);
+        for (int i=0; i<20; i++) {
+            MachineTestUtil.stepThroughVanilla(rules);
+            System.out.println("Done with run " + i);
+        }
+    }
 }

@@ -2,7 +2,7 @@ package player.uct;
 
 import com.google.common.collect.Lists;
 import machina.PropNetStateMachine;
-import propnet.PropNetFactory;
+import propnet.vanilla.PropNetFactory;
 import propnet.nativecode.NativePropNetFactory;
 import propnet.nativecode.NativeUtil;
 import rekkura.ggp.machina.BackwardStateMachine;

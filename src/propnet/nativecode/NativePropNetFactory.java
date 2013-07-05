@@ -2,9 +2,13 @@ package propnet.nativecode;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
-import propnet.*;
+import propnet.vanilla.core.Node;
+import propnet.vanilla.core.NodeFns;
+import propnet.PropNetInterface;
 import propnet.util.Tuple2;
 import propnet.util.Tuple3;
+import propnet.vanilla.PropNet;
+import propnet.vanilla.PropNetFactory;
 import rekkura.ggp.milleu.GameLogicContext;
 import rekkura.logic.model.Dob;
 import rekkura.logic.model.Rule;
@@ -16,6 +20,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 
 /**
  * User: david
@@ -23,6 +28,8 @@ import java.util.*;
  * Time: 9:31 PM
  * Description:
  *      Generates a native propnet. Output files include a .java, .c, .jnilib and .class file.
+ *          1. Build the propnet
+ *          2. Compile it
  */
 public class NativePropNetFactory {
 
@@ -217,8 +224,12 @@ public class NativePropNetFactory {
             // compile
             String cmd = "javac " + javacFlags + " " + javaSourceDir + javaName(className);
             System.out.println("[Native] Compiling Java class file... [command: " + cmd + "]");
-            Runtime.getRuntime().exec(cmd);
+            Process proc = Runtime.getRuntime().exec(cmd);
+            int exitCode = proc.waitFor();
+            Preconditions.checkArgument(exitCode == 0);
         } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
@@ -228,8 +239,6 @@ public class NativePropNetFactory {
         String footer = "#endif";
         String include = "#include <jni.h>\n#include <string.h>\n";
         String JNIVoidHeader = "JNIEXPORT void JNICALL Java_";
-        String wipeDecl = JNIVoidHeader + mangledClassName(fullClassName(packageName, className)) +
-                "_wipeNative(JNIEnv* env, jobject obj, jobject buf)";
         String advanceDecl = JNIVoidHeader + mangledClassName(fullClassName(packageName, className)) +
                 "_advance(JNIEnv *env, jobject obj, jobject buf)";
         String directAccess = "unsigned char* net = (unsigned char *) (*env)->GetDirectBufferAddress(env, buf);";
@@ -260,8 +269,12 @@ public class NativePropNetFactory {
             String cmd = "gcc " + gccFlags + (cSourceDir + srcName(className)) + " -o " +
                     (libDir + libName(className));
             System.out.println("[Native] Compiling JNI lib... [command: " + cmd + "]");
-            Runtime.getRuntime().exec(cmd);
+            Process proc = Runtime.getRuntime().exec(cmd);
+            int exitCode = proc.waitFor();
+            Preconditions.checkArgument(exitCode == 0);
         } catch (IOException e) {
+            e.printStackTrace();
+        } catch (InterruptedException e) {
             e.printStackTrace();
         }
     }
@@ -346,7 +359,6 @@ public class NativePropNetFactory {
             StringBuilder ret = new StringBuilder();
             ret.append("(").append(rhs).append(")").append("^").append(target);
             return ret;
-            //rhs.append("^").append(target);
         }
         return rhs;
     }

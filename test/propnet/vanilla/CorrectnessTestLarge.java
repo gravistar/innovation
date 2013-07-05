@@ -2,7 +2,6 @@ package propnet.vanilla;
 
 import com.google.common.collect.Sets;
 import org.junit.Test;
-import propnet.PropNetFactory;
 import propnet.PropNetInterface;
 import rekkura.logic.model.Rule;
 import rekkura.test.ggp.SimpleGames;

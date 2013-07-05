@@ -1,7 +1,10 @@
-package propnet;
+package propnet.vanilla;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
+import propnet.PropNetInterface;
+import logic.Grounder;
+import propnet.vanilla.core.Node;
 import propnet.util.Tuple2;
 import rekkura.ggp.machina.BackwardStateMachine;
 import rekkura.ggp.machina.ProverStateMachine;

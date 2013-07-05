@@ -1,4 +1,4 @@
-package propnet;
+package propnet.vanilla.core;
 
 import java.util.Collection;
 

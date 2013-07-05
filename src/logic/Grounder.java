@@ -1,4 +1,4 @@
-package propnet;
+package logic;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.*;
@@ -24,6 +24,8 @@ import java.util.Set;
  * Description:
  *      For a set of rules, generates all the valid groundings. Makes sure to cache them in the
  *      pool and the cachet.
+ *
+ *      This really doesn't belong in the propnet dir.
  */
 public class Grounder {
 

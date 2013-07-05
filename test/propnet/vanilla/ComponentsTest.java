@@ -1,7 +1,7 @@
 package propnet.vanilla;
 
 import org.junit.Test;
-import propnet.Node;
+import propnet.vanilla.core.Node;
 
 import static org.junit.Assert.assertTrue;
 

@@ -11,8 +11,6 @@ import machina.PropNetStateMachine;
  *      the propnet machine.
  */
 public abstract class UCTPropNetPlayer extends UCTPlayer<PropNetStateMachine> {
-
-
     @Override
     protected void prepare() {
         this.role = machine.context.pool.dobs.submerge(role);

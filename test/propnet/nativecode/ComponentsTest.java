@@ -1,9 +1,9 @@
 package propnet.nativecode;
 
 import org.junit.*;
-import propnet.Node;
-import propnet.NodeFns;
-import propnet.PropNet;
+import propnet.vanilla.core.Node;
+import propnet.vanilla.core.NodeFns;
+import propnet.vanilla.PropNet;
 import rekkura.logic.model.Dob;
 import util.TestUtil;
 

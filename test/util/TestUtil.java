@@ -2,12 +2,10 @@ package util;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
-import com.google.common.collect.Sets;
 import com.google.common.eventbus.Subscribe;
-import propnet.Node;
-import propnet.PropNet;
-import propnet.ValFn;
-import propnet.util.Tuple2;
+import propnet.vanilla.core.Node;
+import propnet.vanilla.PropNet;
+import propnet.vanilla.core.ValFn;
 import rekkura.ggp.milleu.Game;
 import rekkura.ggp.milleu.MatchRunnable;
 import rekkura.logic.model.Dob;

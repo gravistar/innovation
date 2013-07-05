@@ -5,7 +5,7 @@ import com.google.common.collect.ArrayListMultimap;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
-import propnet.PropNetFactory;
+import propnet.vanilla.PropNetFactory;
 import propnet.PropNetInterface;
 import propnet.util.Tuple2;
 import rekkura.ggp.machina.GgpStateMachine;

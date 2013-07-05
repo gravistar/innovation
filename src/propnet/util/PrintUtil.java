@@ -1,8 +1,8 @@
 package propnet.util;
 
 import com.google.common.base.Preconditions;
-import propnet.Node;
-import propnet.NodeFns;
+import propnet.vanilla.core.Node;
+import propnet.vanilla.core.NodeFns;
 import propnet.nativecode.NativePropNet;
 import rekkura.logic.model.Dob;
 

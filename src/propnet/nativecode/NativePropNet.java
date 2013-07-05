@@ -5,7 +5,6 @@ import propnet.PropNetInterface;
 import rekkura.logic.model.Dob;
 
 import java.nio.ByteBuffer;
-import java.util.Arrays;
 import java.util.Map;
 import java.util.Set;
 
