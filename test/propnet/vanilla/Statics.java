@@ -13,11 +13,15 @@ import java.util.Set;
  */
 public class Statics {
 
-    /*public static final Set<String> skip = Sets.newHashSet("chess.kif", "chinesecheckers.kif",
-            "chinesecheckers4.kif", "chinook.kif", "firesheep.kif",
-            "pentago.kif", "skirmish.kif", "slaughter.kif"); // these games are just ridic
-      */
-    public static final Set<String> skip = Sets.newHashSet();
+    public static final Set<String> skip = Sets.newHashSet(
+        "chinook.kif",
+        "chinesecheckers4.kif",
+        "slaughter.kif",
+        "skirmish.kif",
+        "pentago.kif",
+        "firesheep.kif",
+        "chinesecheckers.kif"
+    );
 
     public static String gamesDir = "/Users/david/Documents/ggp/rekkura2/test/rekkura/test/ggp/games/";
 

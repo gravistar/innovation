@@ -1,10 +1,12 @@
 package util;
 
+import com.google.common.base.Preconditions;
 import com.google.common.collect.ListMultimap;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import com.google.common.collect.Sets;
 import machina.PropNetStateMachine;
+import org.junit.rules.ErrorCollector;
 import propnet.vanilla.PropNetFactory;
 import propnet.nativecode.NativePropNetFactory;
 import rekkura.ggp.machina.BackwardStateMachine;
@@ -28,14 +30,22 @@ import static org.junit.Assert.assertTrue;
  */
 public class MachineTestUtil {
     public static Random rand = new Random(System.currentTimeMillis());
-    public static boolean verbose = false;
+    public static boolean verbose = true;
+    public static boolean superVerbose = true;
+    public static TestType testType = TestType.COLLECTOR;
+    public static ErrorCollector collector = new ErrorCollector();
 
-    public static void stepThroughVanilla(List<Rule> rules) {
-        stepThrough(rules, PropNetStateMachine.create(PropNetFactory.createForStateMachine(rules)));
+    public static enum TestType {
+        ASSERT, COLLECTOR, CUSTOM
     }
 
-    public static void stepThroughNative(List<Rule> rules) {
-        stepThrough(rules, PropNetStateMachine.create(NativePropNetFactory.createForStateMachine(rules)));
+    // game name is for logging
+    public static void stepThroughVanilla(List<Rule> rules, String gameName) {
+        stepThrough(rules, PropNetStateMachine.create(PropNetFactory.createForStateMachine(rules)), gameName);
+    }
+
+    public static void stepThroughNative(List<Rule> rules, String gameName) {
+        stepThrough(rules, PropNetStateMachine.create(NativePropNetFactory.createForStateMachine(rules)), gameName);
     }
 
     /**
@@ -43,7 +53,7 @@ public class MachineTestUtil {
      * @param rules
      * @param pnsm
      */
-    public static void stepThrough(List<Rule> rules, PropNetStateMachine pnsm) {
+    public static void stepThrough(List<Rule> rules, PropNetStateMachine pnsm, String gameName) {
         BackwardStateMachine bsm = BackwardStateMachine.createForRules(rules);
 
         Set<Dob> bsmState = bsm.getInitial();
@@ -62,8 +72,19 @@ public class MachineTestUtil {
             }
 
             // do the dobs in the states have the same name?
-            assertTrue("mismatch between state! pnsm: " + pnsmState + " bsm: " + bsmState, dobMatch(bsmState, pnsmState));
-
+            switch (testType) {
+                case ASSERT:
+                    assertTrue("mismatch between state! pnsm: " + pnsmState + " bsm: " + bsmState, dobMatch(bsmState, pnsmState));
+                case CUSTOM: {
+                    boolean match = dobMatch(bsmState, pnsmState);
+                    if (!match) {
+                        System.out.println(gameName + " failed!");
+                        System.out.println("mismatch between state! pnsm: " + pnsmState + " bsm: " + bsmState);
+                        System.out.println();
+                        return;
+                    }
+                }
+            }
             ListMultimap<Dob,Dob> bsmActions = bsm.getActions(bsmState);
             ListMultimap<Dob,Dob> pnsmActions = pnsm.getActions(pnsmState);
 
@@ -73,7 +94,19 @@ public class MachineTestUtil {
             Map<Dob,Dob> matchedRoles = matchDobList(bsmRoles, pnsmRoles);
 
             // do the dobs in the roles have the same name?
-            assertTrue("mismatch between roles! pnsm: " + pnsmRoles + " bsm: " + bsmRoles, dobMatch(bsmRoles, pnsmRoles));
+            switch (testType) {
+                case ASSERT:
+                    assertTrue("mismatch between roles! pnsm: " + pnsmRoles + " bsm: " + bsmRoles, dobMatch(bsmRoles, pnsmRoles));
+                case CUSTOM: {
+                    boolean match = dobMatch(pnsmRoles, bsmRoles);
+                    if (!match) {
+                        System.out.println(gameName + " failed!");
+                        System.out.println("mismatch between roles! pnsm: " + pnsmRoles + " bsm: " + bsmRoles);
+                        System.out.println();
+                        return;
+                    }
+                }
+            }
 
             Map<Dob,Dob> pickedBSMActions = Maps.newHashMap();
             Map<Dob,Dob> pickedPNSMActions = Maps.newHashMap();
@@ -87,15 +120,28 @@ public class MachineTestUtil {
                 Map<Dob,Dob> matchedActions = matchDobList(bsmRoleActions, pnsmRoleActions);
 
                 // just need to check for size since the matching takes care of name comparison
-                assertTrue("mismatch between actions for role" + role, matchedActions.keySet().size() ==
-                        bsmRoleActions.size());
+                switch (testType) {
+                    case ASSERT:
+                        assertTrue("mismatch between actions for role" + role, matchedActions.keySet().size() ==
+                                bsmRoleActions.size());
+                    case CUSTOM: {
+                        boolean match = matchedActions.keySet().size() == bsmRoleActions.size();
+                        if (!match) {
+                            System.out.println(gameName + " failed!");
+                            System.out.println("mismatch between actions for role" + role);
+                            System.out.println();
+                            return;
+                        }
+                    }
+                }
 
                 int actionId = rand.nextInt(bsmRoleActions.size());
                 Dob bsmRoleAction = bsmRoleActions.get(actionId);
 
                 // make sure machines submit the same actions
                 pickedBSMActions.put(role, bsmRoleAction);
-                pickedPNSMActions.put(matchedRoles.get(role), matchedActions.get(bsmRoleAction));
+                pickedPNSMActions.put(Preconditions.checkNotNull(matchedRoles.get(role), "no matching role for " + role),
+                        Preconditions.checkNotNull(matchedActions.get(bsmRoleAction), "no matching action for " + bsmRoleAction));
 
                 if (verbose) {
                     System.out.println("[BSM ACTION] " + bsmRoleAction);
@@ -107,8 +153,20 @@ public class MachineTestUtil {
                 System.out.println("[BSM TERMINAL] " + bsm.isTerminal(bsmState));
                 System.out.println("[PNSM TERMINAL] " + pnsm.isTerminal(pnsmState));
             }
-            assertTrue("mismatch between terminal!", bsm.isTerminal(bsmState) == pnsm.isTerminal(pnsmState));
 
+            switch (testType) {
+                case ASSERT:
+                    assertTrue("mismatch between terminal!", bsm.isTerminal(bsmState) == pnsm.isTerminal(pnsmState));
+                case CUSTOM: {
+                    boolean passed = bsm.isTerminal(bsmState) == pnsm.isTerminal(pnsmState);
+                    if (!passed) {
+                        System.out.println(gameName + " failed!");
+                        System.out.println("mismatch between terminal!");
+                        System.out.println();
+                        return;
+                    }
+                }
+            }
             // check goals
             if (bsm.isTerminal(bsmState)) {
 
@@ -117,10 +175,22 @@ public class MachineTestUtil {
 
                 for (Dob bsmRole : matchedRoles.keySet()) {
                     Dob pnsmRole = matchedRoles.get(bsmRole);
-
-                    assertEquals(bsmGoals.get(bsmRole), pnsmGoals.get(pnsmRole));
+                    switch (testType) {
+                        case ASSERT:
+                            assertEquals(bsmGoals.get(bsmRole), pnsmGoals.get(pnsmRole));
+                        case CUSTOM: {
+                            boolean passed = bsmGoals.get(bsmRole) == pnsmGoals.get(pnsmRole);
+                            if (!passed) {
+                                System.out.println(gameName + " failed!");
+                                System.out.println(" mismatch between goals for role " + bsmRole +
+                                    " ! bsm: " + bsmGoals.get(bsmRole) + " pnsm: " + pnsmGoals.get(pnsmRole));
+                                System.out.println();
+                                return;
+                            }
+                        }
+                    }
                 }
-                break;
+                return;
             }
 
             bsmState = bsm.nextState(bsmState, pickedBSMActions);

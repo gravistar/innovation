@@ -17,23 +17,26 @@ import java.util.List;
 public class CorrectnessTestSmall {
     @Test
     public void manyButtonsLights() {
+        String gameName = "buttonsandlights";
         List<Rule> rules = SimpleGames.getButtonsAndLights();
         for (int i=0; i<20; i++)
-            MachineTestUtil.stepThroughVanilla(rules);
+            MachineTestUtil.stepThroughVanilla(rules, gameName);
     }
 
     @Test
     public void manyTicTacToe() {
+        String gameName = "tictactoe.kif";
         List<Rule> rules = SimpleGames.getTicTacToeFromFile();
         for (int i=0; i<20; i++)
-            MachineTestUtil.stepThroughVanilla(rules);
+            MachineTestUtil.stepThroughVanilla(rules, gameName);
     }
 
     @Test
     public void manyConnect4() {
+        String gameName = "connect4.kif";
         List<Rule> rules = SimpleGames.getConnectFourFromFile();
         for (int i=0; i<20; i++)
-            MachineTestUtil.stepThroughVanilla(rules);
+            MachineTestUtil.stepThroughVanilla(rules, gameName);
     }
 
     @Test
@@ -42,7 +45,7 @@ public class CorrectnessTestSmall {
         String abs = Statics.gamesDir + gameName;
         List<Rule> rules = SimpleGames.getRulesForFile(abs);
         for (int i=0; i<20; i++) {
-            MachineTestUtil.stepThroughVanilla(rules);
+            MachineTestUtil.stepThroughVanilla(rules, gameName);
             System.out.println("Done with run " + i);
         }
     }

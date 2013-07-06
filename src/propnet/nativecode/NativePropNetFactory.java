@@ -20,7 +20,6 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.text.SimpleDateFormat;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
 
 /**
  * User: david
@@ -40,6 +39,8 @@ public class NativePropNetFactory {
 
     public static Random rand = new Random(System.currentTimeMillis());
     public static boolean debug = false;
+    public static String BAD_CLASSNAME = "BAD_CLASSNAME";
+    public static int BAD_EXIT = -1;
 
     // Shared dirs
     public static String cwd = System.getProperty("user.dir") + "/";
@@ -51,7 +52,7 @@ public class NativePropNetFactory {
     public static String libDir = compileDir + "lib/";
     public static String jniDir = "/System/Library/Frameworks/JavaVM.framework/Versions/A/Headers/";
     public static String libFlag = "-I" + jniDir;
-    public static String gccFlags = libFlag + " -shared -O2 -lc ";
+    public static String clangFlags = libFlag + " -shared -lc "; // took out all optimization flags since it slows comp
 
     // Java class compilation constants
     public static String javaSourceDir = sourceDir + "Java/";
@@ -74,7 +75,7 @@ public class NativePropNetFactory {
     }
 
     // just for debugging
-    public static Tuple2<Tuple2<PropNetInterface, GameLogicContext>, PropNet> fromRulesWithVanilla (List<Rule> rules) {
+    public static Tuple2<Tuple2<PropNetInterface, GameLogicContext>, PropNet> fromRulesWithVanilla(List<Rule> rules) {
         Tuple2<PropNet, GameLogicContext> needed = PropNetFactory.createFromRules(rules);
         PropNet vanilla = needed._1;
         NativePropNet net = getCompiledNet(compile(vanilla));
@@ -107,8 +108,19 @@ public class NativePropNetFactory {
         return compile(net);
     }
 
+    /**
+     *
+     * @param needed
+     * @return
+     *      A working NativePropNet if
+     */
     public static NativePropNet getCompiledNet(Tuple3<String, Integer, Map<Dob,Integer>> needed) {
         String fullName = needed._1;
+        // not necessary, but i'd rather not cause a class load exception if
+        // i can avoid it
+        if (fullName == BAD_CLASSNAME)
+            return null;
+
         int size = needed._2;
         Map<Dob,Integer> propIndices = needed._3;
         try {
@@ -142,12 +154,11 @@ public class NativePropNetFactory {
         String className = makeClassName();
         System.out.println("[Native] Class name: " + className);
         // compile
-        compileJavaClass(className);
-        compileJNI(className, top, indices);
-        try {
-            Thread.sleep(2000);
-        } catch (InterruptedException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+        int javaCompileExitCode = compileJavaClass(className);
+        int jniCompileExitCode = compileJNI(className, top, indices);
+
+        if (javaCompileExitCode == BAD_EXIT || jniCompileExitCode == BAD_EXIT) {
+            return new Tuple3<String, Integer, Map<Dob, Integer>>(BAD_CLASSNAME, top.size(), propIndices);
         }
 
         // try making the class
@@ -189,7 +200,13 @@ public class NativePropNetFactory {
         return "__" + className + "__";
     }
 
-    public static void compileJavaClass(String className) {
+    /**
+     *
+     * @param className
+     * @return
+     *      0 on success, -1 otherwise
+     */
+    public static int compileJavaClass(String className) {
         try {
             // write source file
             BufferedWriter out = new BufferedWriter(new FileWriter(javaSourceDir + javaName(className)));
@@ -227,14 +244,25 @@ public class NativePropNetFactory {
             Process proc = Runtime.getRuntime().exec(cmd);
             int exitCode = proc.waitFor();
             Preconditions.checkArgument(exitCode == 0);
+            System.out.println("[Native] Done compiling Java class file");
+            return exitCode;
         } catch (IOException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        return BAD_EXIT;
     }
 
-    public static void compileJNI(String className, List<Node> top, Map<Node,Integer> indices) {
+    /**
+     *
+     * @param className
+     * @param top
+     * @param indices
+     * @return
+     *      0 on success, -1 otherwise
+     */
+    public static int compileJNI(String className, List<Node> top, Map<Node,Integer> indices) {
         String header = "#ifndef " + macroName(className) + "\n#define " + macroName(className) + "\n";
         String footer = "#endif";
         String include = "#include <jni.h>\n#include <string.h>\n";
@@ -266,17 +294,20 @@ public class NativePropNetFactory {
             out.close();
 
             // compile
-            String cmd = "gcc " + gccFlags + (cSourceDir + srcName(className)) + " -o " +
+            String cmd = "gcc " + clangFlags + (cSourceDir + srcName(className)) + " -o " +
                     (libDir + libName(className));
             System.out.println("[Native] Compiling JNI lib... [command: " + cmd + "]");
             Process proc = Runtime.getRuntime().exec(cmd);
             int exitCode = proc.waitFor();
             Preconditions.checkArgument(exitCode == 0);
+            System.out.println("[Native] Done compiling JNI lib");
+            return exitCode;
         } catch (IOException e) {
             e.printStackTrace();
         } catch (InterruptedException e) {
             e.printStackTrace();
         }
+        return BAD_EXIT;
     }
 
     /**

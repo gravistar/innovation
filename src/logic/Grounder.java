@@ -29,7 +29,7 @@ import java.util.Set;
  */
 public class Grounder {
 
-    private static boolean debug = false;
+    private static boolean debug = true;
     private static long MAX_PROPS = 300000000;
 
     public static SetMultimap<Dob,Set<Atom>> getValidGroundings(List<Rule> rules, final Pool pool,

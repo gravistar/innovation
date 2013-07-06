@@ -50,4 +50,24 @@ public class PrintTest {
         System.out.println("==== Tic Tac Toe ====");
         System.out.println(net);
     }
+
+    @Test
+    public void checkersbarrelnokings() {
+        String gameName = "checkersbarrelnokings.kif";
+        String abs = gamesDir + gameName;
+        List<Rule> rules = SimpleGames.getRulesForFile(abs);
+        PropNetInterface net = PropNetFactory.createFromRulesOnlyNet(rules);
+        System.out.println("==== Checkers And Barrels No King ====");
+        System.out.println(net);
+    }
+
+    @Test
+    public void dualconnect4() {
+        String gameName = "dualconnect4.kif";
+        String abs = gamesDir + gameName;
+        List<Rule> rules = SimpleGames.getRulesForFile(abs);
+        PropNetInterface net = PropNetFactory.createFromRulesOnlyNet(rules);
+        System.out.println("==== Dual Connect 4 ====");
+        System.out.println(net);
+    }
 }
