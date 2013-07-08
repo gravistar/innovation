@@ -7,7 +7,6 @@ import rekkura.ggp.milleu.Player;
 import rekkura.logic.model.Dob;
 
 import java.util.List;
-import java.util.Random;
 import java.util.Set;
 
 /**
@@ -16,12 +15,17 @@ import java.util.Set;
  * Time: 10:32 AM
  * Description:
  *      Provides the depth charge performing for different uct players (native or vanilla)
- * M: machine type
+ *      M: machine type
  */
 public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateBased<M> {
-    private static boolean verbose = true;
+    public boolean verbose = true;
+    public boolean fine = false;
 
     private UCTCharger charger;
+    private long chargeCount = 0;
+    private long cacheSizeState = 0;
+    private long cacheSizeMove = 0;
+    private long nTurns = 0;
 
     public abstract String getTag();
 
@@ -30,10 +34,32 @@ public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateB
         explore();
     }
 
+    protected void printStats() {
+        String prefix = "\t";
+        System.out.println();
+        System.out.println(prefix + "=== " + getTag() + " Performance Stats " + " ===");
+        if (nTurns == 0)
+            System.out.println("Error: No statistics available!");
+        System.out.println(prefix + "\tAverage Charges Per Turn: " + (((double) chargeCount) / nTurns));
+        System.out.println(prefix + "\tDistinct States Visited: " + cacheSizeState);
+        System.out.println(prefix + "\tDistinct Move/State Pairs: " + cacheSizeMove);
+        System.out.println();
+    }
+
+    private void updateStats() {
+        chargeCount++;
+        cacheSizeState = charger.sharedStateCache.size();
+        cacheSizeMove = 0;
+        for (Dob key : charger.actionCaches.keySet())
+            cacheSizeMove += charger.actionCaches.get(key).timesTaken.size();
+    }
+
     protected final void plan() {
         charger = new UCTCharger(Lists.newArrayList(machine.getActions(machine.getInitial()).keySet()));
-        System.out.println(getTag() + "Done building charger!");
-        System.out.println(getTag() + "Role: " + role);
+        if (verbose) {
+            System.out.println(getTag() + " Done building charger!");
+            System.out.println(getTag() + " Role: " + role);
+        }
         explore();
     }
 
@@ -48,13 +74,15 @@ public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateB
         StateActionPair pair = new StateActionPair(state, selected);
         UCTCache roleCache = charger.actionCaches.get(role);
 
+        nTurns++;
         while(validState()) {
             chargeCount++;
             charger.fireAndReel(state, machine);
             selected = charger.bestMove(role, state, candidateActions);
             setDecision(current.turn, selected);
+            updateStats();
         }
-        if (verbose) {
+        if (verbose && fine) {
             System.out.println(getTag() + " Charge count: " + chargeCount);
             System.out.println(getTag() + " State cache size: " + charger.sharedStateCache.size());
             if (roleCache.explored(state, selected)) {

@@ -30,7 +30,7 @@ import static org.junit.Assert.assertTrue;
  */
 public class MachineTestUtil {
     public static Random rand = new Random(System.currentTimeMillis());
-    public static boolean verbose = true;
+    public static boolean verbose = false;
     public static boolean superVerbose = true;
     public static TestType testType = TestType.COLLECTOR;
     public static ErrorCollector collector = new ErrorCollector();

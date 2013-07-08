@@ -2,12 +2,17 @@ package util;
 
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
+import com.google.common.eventbus.EventBus;
 import com.google.common.eventbus.Subscribe;
+import player.uct.UCTPlayerFactory;
 import propnet.vanilla.core.Node;
 import propnet.vanilla.PropNet;
 import propnet.vanilla.core.ValFn;
 import rekkura.ggp.milleu.Game;
+import rekkura.ggp.milleu.Match;
 import rekkura.ggp.milleu.MatchRunnable;
+import rekkura.ggp.milleu.Player;
+import rekkura.ggp.player.MonteCarloPlayer;
 import rekkura.logic.model.Dob;
 
 import java.util.List;
@@ -21,7 +26,6 @@ import java.util.Map;
  * To change this template use File | Settings | File Templates.
  */
 public class TestUtil {
-
 
     /**
      * Gives a disconnected propnet with same val fn
@@ -40,11 +44,105 @@ public class TestUtil {
         return new PropNet(props, topo);
     }
 
+    /**
+     * Pretty core method to the test suite. Runs multiple matches between players to collect stats
+     * @param config
+     * @param roles
+     * @param types
+     * @param numRuns
+     * @param bus
+     */
+    public static void runMultipleMatches(Game.Config config, List<Dob> roles, List<TestUtil.PlayerType> types,
+                                          int numRuns, EventBus bus) {
+        TestUtil.MatchRunner mr = new TestUtil.MatchRunner(config, types, bus);
+        bus.register(mr);
+        bus.register(new TestUtil.Tallier(mr, roles, numRuns, bus));
+        bus.post(new TestUtil.NewMatchEvent(mr));
+    }
+
+    public static class NewMatchEvent {
+        public MatchRunner mr;
+        public NewMatchEvent(MatchRunner mr) {
+            this.mr = mr;
+        }
+    }
+
+    public static enum PlayerType {
+        MonteCarlo,
+        UCTProver,
+        UCTPropNetVanilla,
+        UCTPropNetNative
+    }
+
+    public static Player createNewPlayer(PlayerType type) {
+        switch (type) {
+            case MonteCarlo:
+                return new MonteCarloPlayer();
+            case UCTProver:
+                return UCTPlayerFactory.createProverPlayer();
+            case UCTPropNetVanilla:
+                return UCTPlayerFactory.createVanillaPropNetPlayer();
+            case UCTPropNetNative:
+                return UCTPlayerFactory.createNativePropNetPlayer();
+        }
+        return null;
+    }
+
+    public static List<Player> createNewPlayers(List<PlayerType> types) {
+        List<Player> ret = Lists.newArrayList();
+
+        for (PlayerType type : types)
+            ret.add( createNewPlayer(type) );
+
+        return ret;
+    }
+
+    /**
+     * Works in conjunction with the tallier to see which player is better.
+     * Starts the actual matches between players.
+     */
+    public static class MatchRunner {
+        public List<PlayerType> types;
+        public Match.Builder builder;
+        public EventBus bus;
+
+        public MatchRunner(Match.Builder builder, List<PlayerType> types, EventBus bus) {
+            this.builder = builder;
+            this.types = types;
+            this.bus = bus;
+        }
+
+        public MatchRunner(Game.Config config, List<PlayerType> types, EventBus bus) {
+            this.builder = Match.newBuilder(config);
+            this.types = types;
+            this.bus = bus;
+        }
+
+        @Subscribe
+        public void startNewMatch(NewMatchEvent e) {
+            if (this != e.mr)
+                return;
+            MatchRunnable match = builder.build().newRunnable(
+                    createNewPlayers(types),
+                    bus);
+            match.run();
+        }
+    }
+
+    /**
+     * Works in conjunction with MatchRunner to see which player is better.
+     * Tallies a running total of games won between the players and prints
+     * statistics.
+     */
     public static class Tallier {
         public Map<Dob, Integer> wins = Maps.newHashMap();
         public int total = 0;
         public int limit;
-        public Tallier(List<Dob> roles, int l) {
+        public MatchRunner mr;
+        public EventBus bus;
+        public Tallier(MatchRunner mr, List<Dob> roles, int l, EventBus bus) {
+            this.mr = mr;
+            this.bus = bus;
             for (Dob role : roles)
                 wins.put(role, 0);
             limit = l;
@@ -61,7 +159,19 @@ public class TestUtil {
                     wins.put(role, 1 + wins.get(role));
             }
             total++;
+            if (total < limit)
+                callForNewMatch();
+            if (total == limit)
+                printFinalHeader();
             output();
+        }
+
+        public void callForNewMatch() {
+            bus.post(new NewMatchEvent(mr));
+        }
+
+        public void printFinalHeader() {
+            System.out.println("===== MATCH TEST SUMMARY =====");
         }
 
         public void output() {

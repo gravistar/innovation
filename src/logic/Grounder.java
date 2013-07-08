@@ -29,7 +29,7 @@ import java.util.Set;
  */
 public class Grounder {
 
-    private static boolean debug = true;
+    private static boolean debug = false;
     private static long MAX_PROPS = 300000000;
 
     public static SetMultimap<Dob,Set<Atom>> getValidGroundings(List<Rule> rules, final Pool pool,
@@ -60,11 +60,14 @@ public class Grounder {
                 continue;
             }
 
+
             // now ground the rule
             List<Atom> body = rule.body;
 
             // what should cachet be expected to have??
             ListMultimap<Atom,Dob> bodySpace = Terra.getBodySpace(rule, cachet);
+            if (debug)
+                System.out.println("[DEBUG] body space: " + bodySpace);
             List<Atom> posBodyTerms = Atom.filterPositives(body);
 
             // get the positive body space as lists in order they appear in body
@@ -104,6 +107,11 @@ public class Grounder {
                     // verify unification
                     if (!validDistinct(unify, fr, fr.vars))
                         return false;
+
+                    /*if (debug) {
+                        System.out.println("[DEBUG] filtering for " + fr);
+                        System.out.println("[DEBUG] unify: " + unify);
+                    }*/
 
                     Set<Dob> bodiesToGround = groundedBy.get(lastVar);
                     for (Dob bodyToGround : bodiesToGround) {
@@ -169,9 +177,6 @@ public class Grounder {
      * @return
      */
     public static Dob getSubmergedGround(Dob dob, Pool pool, Cachet cachet) {
-        String key = dob.toString();
-        if (pool.dobs.cache.containsKey(key))
-            return pool.dobs.cache.get(key);
         cachet.storeGround(dob);
         return pool.dobs.submerge(dob);
     }

@@ -41,7 +41,8 @@ public class UCTPlayerFactory {
 
             @Override
             protected void reflect() {
-                // does nothing
+                if (this.verbose)
+                    printStats();
             }
         };
     }
@@ -61,7 +62,8 @@ public class UCTPlayerFactory {
 
             @Override
             protected void reflect() {
-                // does nothing
+                if (this.verbose)
+                    printStats();
             }
         };
     }
@@ -81,6 +83,8 @@ public class UCTPlayerFactory {
 
             @Override
             protected void reflect() {
+                if (this.verbose)
+                    printStats();
                 // cleanup
                 NativeUtil.deleteGeneratedFiles();
             }
