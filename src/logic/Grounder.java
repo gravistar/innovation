@@ -51,21 +51,28 @@ public class Grounder {
             if (rule.vars.isEmpty()) {
                 Dob head = rule.head.dob;
                 Preconditions.checkArgument(pool.dobs.cache.containsKey(head.toString()));
+                cachet.storeGround(head);
                 for (Atom body : rule.body) {
                     Preconditions.checkArgument(pool.atoms.cache.containsKey(body.toString()));
                     Preconditions.checkArgument(pool.dobs.cache.containsKey(body.dob.toString()));
+                    cachet.storeGround(body.dob);
                 }
 
                 groundings.put(head, Sets.newHashSet(rule.body));
                 continue;
             }
 
-
             // now ground the rule
             List<Atom> body = rule.body;
 
             // what should cachet be expected to have??
             ListMultimap<Atom,Dob> bodySpace = Terra.getBodySpace(rule, cachet);
+
+            if (!rule.vars.isEmpty() && debug && bodySpace.isEmpty()) {
+                System.out.println("[DEBUG ERROR] expected nonzero body space for rule: " + rule);
+            }
+
+
             if (debug)
                 System.out.println("[DEBUG] body space: " + bodySpace);
             List<Atom> posBodyTerms = Atom.filterPositives(body);

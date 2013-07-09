@@ -18,6 +18,8 @@ import java.util.List;
  */
 public class CorrectnessTestLarge {
 
+    public static int numRuns = 5;
+
     @Test
     public void manyTestHuge() {
         String gamesDir = "/Users/david/Documents/ggp/rekkura2/test/rekkura/test/ggp/games/";
@@ -29,8 +31,10 @@ public class CorrectnessTestLarge {
                 continue;
             System.out.println("Processing game: " + gameName);
             List<Rule> rules = SimpleGames.getRulesForFile(gameFile.getAbsolutePath());
-            for (int i=0; i<10; i++)
+            for (int i=0; i<numRuns; i++) {
                 MachineTestUtil.stepThroughVanilla(rules, gameName);
+                System.out.println("Done with run " + i);
+            }
             System.out.println();
         }
     }

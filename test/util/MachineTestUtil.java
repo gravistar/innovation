@@ -31,7 +31,8 @@ import static org.junit.Assert.assertTrue;
 public class MachineTestUtil {
     public static Random rand = new Random(System.currentTimeMillis());
     public static boolean verbose = false;
-    public static boolean superVerbose = true;
+    public static boolean nonterminal = true;
+    public static boolean superVerbose = false;
     public static TestType testType = TestType.COLLECTOR;
     public static ErrorCollector collector = new ErrorCollector();
 
@@ -54,6 +55,7 @@ public class MachineTestUtil {
      * @param pnsm
      */
     public static void stepThrough(List<Rule> rules, PropNetStateMachine pnsm, String gameName) {
+        System.out.println("Starting stepthrough");
         BackwardStateMachine bsm = BackwardStateMachine.createForRules(rules);
 
         Set<Dob> bsmState = bsm.getInitial();
@@ -63,10 +65,14 @@ public class MachineTestUtil {
             pnsm.printMappings();
 
         boolean endGame = false;
-        int iteration = 1;
+        int iteration = 0;
         while (!endGame) {
+            iteration++;
+            if (nonterminal)
+                System.out.println("[ITERATION " + iteration + "]");
+
             if (verbose) {
-                System.out.println("[ITERATION " + iteration++ + "]");
+                System.out.println("[ITERATION " + iteration + "]");
                 System.out.println("[BSM STATE] " + bsmState);
                 System.out.println("[PNSM STATE] " + pnsmState);
             }
@@ -217,6 +223,8 @@ public class MachineTestUtil {
         Set<Dob> used = Sets.newHashSet();
         for (Dob l : left) {
             for (Dob r : right) {
+                if (l == null && r == null)
+                    continue;
                 if (Dob.compare(l, r) == 0 && !used.contains(r) && !used.contains(l)) {
                     used.add(l);
                     used.add(r);
