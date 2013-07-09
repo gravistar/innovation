@@ -102,4 +102,14 @@ public class CorrectnessTestSmall {
         }
     }
 
+    @Test
+    public void jointButtonsAndLights() {
+        String gameName = "jointbuttonsandlights.kif";
+        List<Rule> rules = Statics.rulesForGame(gameName);
+        for (int i=0; i<numRuns; i++) {
+            MachineTestUtil.stepThroughVanilla(rules, gameName);
+            System.out.println("Done with run " + i);
+        }
+    }
+
 }

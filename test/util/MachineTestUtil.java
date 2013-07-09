@@ -30,10 +30,10 @@ import static org.junit.Assert.assertTrue;
  */
 public class MachineTestUtil {
     public static Random rand = new Random(System.currentTimeMillis());
-    public static boolean verbose = false;
+    public static boolean verbose = true;
     public static boolean nonterminal = true;
-    public static boolean superVerbose = false;
-    public static TestType testType = TestType.COLLECTOR;
+    public static boolean superVerbose = true;
+    public static TestType testType = TestType.ASSERT;
     public static ErrorCollector collector = new ErrorCollector();
 
     public static enum TestType {
@@ -68,13 +68,16 @@ public class MachineTestUtil {
         int iteration = 0;
         while (!endGame) {
             iteration++;
-            if (nonterminal)
-                System.out.println("[ITERATION " + iteration + "]");
 
             if (verbose) {
                 System.out.println("[ITERATION " + iteration + "]");
                 System.out.println("[BSM STATE] " + bsmState);
                 System.out.println("[PNSM STATE] " + pnsmState);
+            }
+
+            // print the fucking net
+            if (verbose) {
+                System.out.println("Net: " + pnsm.net);
             }
 
             // do the dobs in the states have the same name?

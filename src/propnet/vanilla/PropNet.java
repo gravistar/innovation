@@ -84,9 +84,9 @@ public class PropNet implements PropNetInterface {
         StringBuilder outBuilder = new StringBuilder();
         // negative case
         outBuilder.append(prefixBuilder).append("[NOT]");
+        outBuilder.append(" val: ").append(not.val).append("\n");
         Preconditions.checkArgument(not.inputs.size() == 1 && not.inputs.iterator().next().fn == NodeFns.OR);
         Node notOr = not.inputs.iterator().next();
-        outBuilder.append(" val: ").append(notOr.val).append("\n");
         Preconditions.checkArgument(notOr.inputs.size() > 0);
         outBuilder.append(prefixBuilder).append("\t[OR]").append(" val: ").append(notOr.val).append("\n");
         for (Node orInput : notOr.inputs) {

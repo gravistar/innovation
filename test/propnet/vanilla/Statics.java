@@ -27,9 +27,16 @@ public class Statics {
         "chinesecheckers.kif",
         "checkersbarrelnokings.kif", // propnettable
         "chinook6x6.kif",            // propnettable
+        "jointbuttonsandlights.kif", // propnettable
+        "freeforall.kif",            // propnettable but hangs
+        "knightstour.kif",           // propnettable but hangs
         "tictacheavenfc.kif",        // propnettable (npe in dob compare structure)
         "ttcc4.kif"                  // propnettable
     );
+
+    // following just hang randomly
+    // freeforall.kif
+    // knightstour.kif
 
     public static String gamesDir = "/Users/david/Documents/ggp/rekkura2/test/rekkura/test/ggp/games/";
 
