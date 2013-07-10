@@ -8,6 +8,9 @@ import rekkura.logic.model.Dob;
 
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 /**
  * User: david
@@ -21,11 +24,15 @@ public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateB
     public boolean verbose = true;
     public boolean fine = false;
 
-    private UCTCharger charger;
-    private long chargeCount = 0;
-    private long cacheSizeState = 0;
-    private long cacheSizeMove = 0;
-    private long nTurns = 0;
+    public UCTCharger charger;
+    public volatile long chargeCount = 0;
+    public long cacheSizeState = 0;
+    public long cacheSizeMove = 0;
+    public long nTurns = 0;
+
+    // for multithreading
+    public abstract int numThreads();
+    public ExecutorService chargeManager = Executors.newFixedThreadPool(numThreads());
 
     public abstract String getTag();
 
@@ -75,6 +82,14 @@ public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateB
         UCTCache roleCache = charger.actionCaches.get(role);
 
         nTurns++;
+        // begin threads
+        // they use the same charger, different machines
+        List<Callable<Void>> chargeTasks = Lists.newArrayList();
+        for (int i=0; i<numThreads(); i++)
+            chargeTasks.add(buildDepthCharger(state, ))
+        chargeManager.invokeAll();
+
+
         while(validState()) {
             chargeCount++;
             charger.fireAndReel(state, machine);
@@ -82,6 +97,7 @@ public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateB
             setDecision(current.turn, selected);
             updateStats();
         }
+        // end threads
         if (verbose && fine) {
             System.out.println(getTag() + " Charge count: " + chargeCount);
             System.out.println(getTag() + " State cache size: " + charger.sharedStateCache.size());
@@ -94,4 +110,25 @@ public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateB
             System.out.println();
         }
     }
+
+    // create a new machine for each one
+    public Callable<Void> buildDepthCharger(final Set<Dob> state, final M machine, final Game.Turn current,
+                                            final List<Dob> candidateActions) {
+       return new Callable<Void>() {
+           @Override
+           public Void call() throws Exception {
+               while(validState()) {
+                   chargeCount++;
+                   charger.fireAndReel(state, machine);
+                   synchronized (current) {
+                       Dob selected = charger.bestMove(role, state, candidateActions);
+                       setDecision(current.turn, selected);
+                       updateStats();
+                   }
+               }
+               return null;
+           }
+       };
+    }
+
 }

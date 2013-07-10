@@ -154,18 +154,18 @@ class UCTCache {
     }
     
     private double uctBonus(StateActionPair saPair) {
-    	int timesVisitedState = timesVisited.get(saPair.getState());
-    	double UCTBonus = Math.sqrt(Math.log(timesVisitedState) / timesTaken.get(saPair));
-    	return UCTBonus;
+        int timesVisitedState = timesVisited.get(saPair.getState());
+        double UCTBonus = Math.sqrt(Math.log(timesVisitedState) / timesTaken.get(saPair));
+        return UCTBonus;
     }
 
     @Override
     public String toString() {
-    	String prefix = "[UCT Cache]======\n";
-    	String scoreTotalStr = "\tScore Total: " + goalScoreTotal +  "\n";
-    	String timesTakenStr = "\tTimes taken: " + timesTaken + "\n";
-    	String timesVisitedStr = "\tTimes visited: " + timesVisited + "\n";
-    	return prefix + scoreTotalStr + timesTakenStr + timesVisitedStr;
+        String prefix = "[UCT Cache]======\n";
+        String scoreTotalStr = "\tScore Total: " + goalScoreTotal +  "\n";
+        String timesTakenStr = "\tTimes taken: " + timesTaken + "\n";
+        String timesVisitedStr = "\tTimes visited: " + timesVisited + "\n";
+        return prefix + scoreTotalStr + timesTakenStr + timesVisitedStr;
     }
     
 }

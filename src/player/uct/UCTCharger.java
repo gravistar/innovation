@@ -42,7 +42,6 @@ class UCTCharger {
     }
 
     public void fireAndReel(Set<Dob> state, StateMachine<Set<Dob>, Dob> machine) {
-    	
         // clear in case of leftover
         clearHistory();
         Set<Dob> terminal = fire(state, machine);
