@@ -31,7 +31,7 @@ import java.util.Set;
  */
 public class PropNetFactory {
 
-    public static boolean debug = false;
+    public static boolean debug = true;
 
     /**
      * Lowest level create from rules. Returns the vanilla propnet.
@@ -149,7 +149,6 @@ public class PropNetFactory {
     // Can only make nodes for grounded rules
     public static void processRuleSomePositiveBody(Dob head,
                                                    List<Atom> bodies,
-                                                   Cachet cachet,
                                                    Map<Dob,Node> props,
                                                    Set<Node> bottom,
                                                    Set<Node> net) {
@@ -203,7 +202,6 @@ public class PropNetFactory {
 
     public static void processRuleAllNegativeBody(Dob head,
                                                   List<Atom> body,
-                                                  Cachet cachet,
                                                   Map<Dob, Node> props,
                                                   Set<Node> bottom,
                                                   Set<Node> net) {
@@ -231,14 +229,12 @@ public class PropNetFactory {
 
     /**
      * Can only add nodes for grounded rules
-     * @param cachet
      * @param props
      * @param bottom
      * @param net
      */
     public static void processGrounding(Dob head,
                                         List<Atom> bodies,
-                                        Cachet cachet,
                                         Map<Dob,Node> props,
                                         Set<Node> bottom,
                                         Set<Node> net) {
@@ -249,9 +245,9 @@ public class PropNetFactory {
         }
 
         if (Atom.filterPositives(bodies).isEmpty())
-            processRuleAllNegativeBody(head, bodies, cachet, props, bottom, net);
+            processRuleAllNegativeBody(head, bodies, props, bottom, net);
         else
-            processRuleSomePositiveBody(head, bodies, cachet, props, bottom, net);
+            processRuleSomePositiveBody(head, bodies, props, bottom, net);
     }
 
     /**
@@ -273,10 +269,8 @@ public class PropNetFactory {
         }
 
         // create nodes for init
-        for (Dob ground : init) {
-            //Preconditions.checkArgument(pool.dobs.cache.containsKey(ground.toString()));
+        for (Dob ground : init)
             getNodeForProp(ground, props, bottom, net);
-        }
 
         SetMultimap<Dob, Set<Atom>> groundings = Grounder.getValidGroundings(rules, known, pool, cachet);
         if (debug)
@@ -286,7 +280,7 @@ public class PropNetFactory {
         for (Dob head : groundings.keySet()) {
             for (Set<Atom> body : groundings.get(head)) {
                 List<Atom> bodies = Lists.newArrayList(body);
-                processGrounding(head, bodies, cachet, props, bottom, net);
+                processGrounding(head, bodies, props, bottom, net);
             }
         }
 

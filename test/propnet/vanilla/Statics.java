@@ -27,10 +27,9 @@ public class Statics {
         "chinesecheckers.kif",
         "checkersbarrelnokings.kif", // propnettable
         "chinook6x6.kif",            // propnettable
-        "jointbuttonsandlights.kif", // propnettable
         "freeforall.kif",            // propnettable but hangs
         "knightstour.kif",           // propnettable but hangs
-        "tictacheavenfc.kif",        // propnettable (npe in dob compare structure)
+        "tictacheavenfc.kif",        // BAD KIF (no bases)
         "ttcc4.kif"                  // propnettable
     );
 

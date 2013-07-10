@@ -12,6 +12,7 @@ import rekkura.ggp.machina.GgpStateMachine;
 import rekkura.ggp.milleu.GameLogicContext;
 import rekkura.logic.model.Dob;
 import rekkura.logic.model.Rule;
+import rekkura.logic.structure.Pool;
 import rekkura.util.Colut;
 
 import java.util.List;
@@ -140,6 +141,9 @@ public class PropNetStateMachine implements GgpStateMachine{
 
     // seems hacky that i should even do this
     public static Set<Dob> findInitBases(Set<Dob> grounds, Set<Dob> bases, Dob initName) {
+        // make sure we find the actual prop
+
+
         // get grounds with init
         Set<Dob> inits = Sets.newHashSet();
         for (Dob ground : grounds) {

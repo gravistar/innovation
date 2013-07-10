@@ -35,7 +35,7 @@ public class Grounder {
     public static SetMultimap<Dob,Set<Atom>> getValidGroundings(List<Rule> rules,
                                                                 final Set<Dob> known,
                                                                 final Pool pool,
-                                                                Cachet cachet) {
+                                                                final Cachet cachet) {
         SetMultimap<Dob, Set<Atom>> groundings = HashMultimap.create(); // head -> all atoms
 
         // now process the rules
@@ -51,13 +51,9 @@ public class Grounder {
 
             // already grounded?
             if (rule.vars.isEmpty()) {
-                Dob head = rule.head.dob;
-                Preconditions.checkArgument(known.contains(head));
-                cachet.storeGround(head);
-                for (Atom body : rule.body) {
-                    Preconditions.checkArgument(known.contains(body.dob));
-                    cachet.storeGround(body.dob);
-                }
+                Dob head = submergeAndAddKnown(rule.head.dob, known, pool, cachet);
+                for (Atom body : rule.body)
+                    submergeAndAddKnown(body.dob, known, pool, cachet);
 
                 groundings.put(head, Sets.newHashSet(rule.body));
                 continue;
@@ -124,11 +120,11 @@ public class Grounder {
                     Set<Dob> bodiesToGround = groundedBy.get(lastVar);
                     for (Dob bodyToGround : bodiesToGround) {
                         Dob grounded = Unifier.replace(bodyToGround, unify);
-                        if (!known.contains(grounded)) {
+                        Dob submerged = getSubmergedGround(grounded, pool, cachet);
+                        if (!known.contains(submerged)) {
                             return false;
                         }
                     }
-
                     return true;
                 }
             };
@@ -155,11 +151,11 @@ public class Grounder {
 
                 Rule grounded = Unifier.replace(rule, unify, Sets.<Dob>newHashSet());
                 Preconditions.checkArgument(grounded.vars.isEmpty());
-                Dob head = getSubmergedGround(grounded.head.dob, known, pool, cachet);
+                Dob head = submergeAndAddKnown(grounded.head.dob, known, pool, cachet);
                 List<Atom> submergedBodies = Lists.newArrayList();
                 // submerge the atom dobs and make new bodies
                 for (Atom b : grounded.body) {
-                    Dob bd = getSubmergedGround(b.dob, known, pool, cachet);
+                    Dob bd = submergeAndAddKnown(b.dob, known, pool, cachet);
                     Atom newbody = getSubmergedAtom(new Atom(bd, b.truth), known, pool);
                     Preconditions.checkNotNull(newbody);
                     submergedBodies.add(newbody);
@@ -186,10 +182,16 @@ public class Grounder {
      * @param cachet
      * @return
      */
-    public static Dob getSubmergedGround(Dob dob, Set<Dob> known, Pool pool, Cachet cachet) {
+    public static Dob getSubmergedGround(Dob dob, Pool pool, Cachet cachet) {
         cachet.storeGround(dob);
-        known.add(dob);
-        return pool.dobs.submerge(dob);
+        Dob submerged = pool.dobs.submerge(dob);
+        return submerged;
+    }
+
+    public static Dob submergeAndAddKnown(Dob dob, Set<Dob> known, Pool pool, Cachet cachet) {
+        Dob submerged = getSubmergedGround(dob, pool, cachet);
+        known.add(submerged);
+        return submerged;
     }
 
     /**

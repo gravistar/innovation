@@ -30,10 +30,10 @@ import static org.junit.Assert.assertTrue;
  */
 public class MachineTestUtil {
     public static Random rand = new Random(System.currentTimeMillis());
-    public static boolean verbose = true;
+    public static boolean verbose = false;
     public static boolean nonterminal = true;
     public static boolean superVerbose = true;
-    public static TestType testType = TestType.ASSERT;
+    public static TestType testType = TestType.CUSTOM;
     public static ErrorCollector collector = new ErrorCollector();
 
     public static enum TestType {
@@ -82,8 +82,9 @@ public class MachineTestUtil {
 
             // do the dobs in the states have the same name?
             switch (testType) {
-                case ASSERT:
+                case ASSERT: {
                     assertTrue("mismatch between state! pnsm: " + pnsmState + " bsm: " + bsmState, dobMatch(bsmState, pnsmState));
+                }
                 case CUSTOM: {
                     boolean match = dobMatch(bsmState, pnsmState);
                     if (!match) {
@@ -212,6 +213,8 @@ public class MachineTestUtil {
 
     // Utility matching methods
     public static boolean dobMatch(Collection<Dob> lhs, Collection<Dob> rhs) {
+        if (lhs.size() != rhs.size())
+            return false;
         Set<String> l = Sets.newHashSet();
         for (Dob d : lhs)
             l.add(d.toString());

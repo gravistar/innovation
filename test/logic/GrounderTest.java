@@ -1,5 +1,6 @@
 package logic;
 
+import com.google.common.collect.Sets;
 import org.junit.Test;
 import propnet.vanilla.PropNetFactory;
 import propnet.vanilla.Statics;
@@ -22,6 +23,30 @@ import java.util.Set;
 public class GrounderTest {
 
     @Test
+    public void tictacheaven() {
+        List<Rule> rules = Statics.rulesForGame("tictacheavenfc.kif");
+        BackwardStateMachine machine = BackwardStateMachine.createForRules(rules);
+        Set<Dob> initGrounds = PropNetFactory.prepareMachine(machine);
+        Cachet cachet = new Cachet(machine.rta);
+        cachet.storeAllGround(initGrounds);
+        List<Rule> topRuleOrder = Topper.toList(machine.rta.ruleOrder);
+        Set<Dob> known = Sets.newHashSet(initGrounds);
+        Grounder.getValidGroundings(topRuleOrder, known, machine.rta.fortre.pool, cachet);
+    }
+
+    @Test
+    public void buttonsandlights() {
+        List<Rule> rules = Statics.rulesForGame("bestbuttonsandlights.kif");
+        BackwardStateMachine machine = BackwardStateMachine.createForRules(rules);
+        Set<Dob> initGrounds = PropNetFactory.prepareMachine(machine);
+        Cachet cachet = new Cachet(machine.rta);
+        cachet.storeAllGround(initGrounds);
+        List<Rule> topRuleOrder = Topper.toList(machine.rta.ruleOrder);
+        Set<Dob> known = Sets.newHashSet(initGrounds);
+        Grounder.getValidGroundings(topRuleOrder, known, machine.rta.fortre.pool, cachet);
+    }
+
+    @Test
     public void dualconnect4() {
         List<Rule> rules = Statics.rulesForGame("dualconnect4.kif");
         BackwardStateMachine machine = BackwardStateMachine.createForRules(rules);
@@ -29,7 +54,8 @@ public class GrounderTest {
         Cachet cachet = new Cachet(machine.rta);
         cachet.storeAllGround(initGrounds);
         List<Rule> topRuleOrder = Topper.toList(machine.rta.ruleOrder);
-        Grounder.getValidGroundings(topRuleOrder, machine.rta.fortre.pool, cachet);
+        Set<Dob> known = Sets.newHashSet(initGrounds);
+        Grounder.getValidGroundings(topRuleOrder, known, machine.rta.fortre.pool, cachet);
     }
 
 }

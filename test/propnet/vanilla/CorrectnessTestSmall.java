@@ -82,6 +82,7 @@ public class CorrectnessTestSmall {
         }
     }
 
+/*  BAD KIF: No bases
     @Test
     public void manyTicTacHeavenFc() {
         String gameName = "tictacheavenfc.kif";
@@ -91,7 +92,9 @@ public class CorrectnessTestSmall {
             System.out.println("Done with run " + i);
         }
     }
+  */
 
+/*
     @Test
     public void manyTTCC4() {
         String gameName = "ttcc4.kif";
@@ -101,6 +104,7 @@ public class CorrectnessTestSmall {
             System.out.println("Done with run " + i);
         }
     }
+*/
 
     @Test
     public void jointButtonsAndLights() {
