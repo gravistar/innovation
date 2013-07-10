@@ -265,18 +265,20 @@ public class PropNetFactory {
     public static PropNet buildNet(Set<Dob> init, List<Rule> rules, final Pool pool, Cachet cachet) {
         Map<Dob, Node> props = Maps.newHashMap(); // the nodes for the dobs will have to be set each turn
         Set<Node> net = Sets.newHashSet();
-        Set<Node> bottom = Sets.newHashSet(); // for constructing the topological order without having to do N^2
+        Set<Node> bottom = Sets.newHashSet();     // for constructing the topological order without
+                                                  // having to do N^2
+        Set<Dob> known = Sets.newHashSet(init);   // groundings that are known to exist
         if (debug) {
             System.out.println("[DEBUG] Init props: " + init);
         }
 
         // create nodes for init
         for (Dob ground : init) {
-            Preconditions.checkArgument(pool.dobs.cache.containsKey(ground.toString()));
+            //Preconditions.checkArgument(pool.dobs.cache.containsKey(ground.toString()));
             getNodeForProp(ground, props, bottom, net);
         }
 
-        SetMultimap<Dob, Set<Atom>> groundings = Grounder.getValidGroundings(rules, pool, cachet);
+        SetMultimap<Dob, Set<Atom>> groundings = Grounder.getValidGroundings(rules, known, pool, cachet);
         if (debug)
             System.out.println("[DEBUG] Done generating groundings. Building net.");
 
