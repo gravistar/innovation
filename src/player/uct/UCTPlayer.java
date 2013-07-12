@@ -30,10 +30,6 @@ public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateB
     public long cacheSizeMove = 0;
     public long nTurns = 0;
 
-    // for multithreading
-    public abstract int numThreads();
-    public ExecutorService chargeManager = Executors.newFixedThreadPool(numThreads());
-
     public abstract String getTag();
 
     @Override
@@ -63,10 +59,6 @@ public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateB
 
     protected final void plan() {
         charger = new UCTCharger(Lists.newArrayList(machine.getActions(machine.getInitial()).keySet()));
-        if (verbose) {
-            System.out.println(getTag() + " Done building charger!");
-            System.out.println(getTag() + " Role: " + role);
-        }
         explore();
     }
 
@@ -82,13 +74,6 @@ public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateB
         UCTCache roleCache = charger.actionCaches.get(role);
 
         nTurns++;
-        // begin threads
-        // they use the same charger, different machines
-        List<Callable<Void>> chargeTasks = Lists.newArrayList();
-        for (int i=0; i<numThreads(); i++)
-            chargeTasks.add(buildDepthCharger(state, ))
-        chargeManager.invokeAll();
-
 
         while(validState()) {
             chargeCount++;
@@ -110,25 +95,4 @@ public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateB
             System.out.println();
         }
     }
-
-    // create a new machine for each one
-    public Callable<Void> buildDepthCharger(final Set<Dob> state, final M machine, final Game.Turn current,
-                                            final List<Dob> candidateActions) {
-       return new Callable<Void>() {
-           @Override
-           public Void call() throws Exception {
-               while(validState()) {
-                   chargeCount++;
-                   charger.fireAndReel(state, machine);
-                   synchronized (current) {
-                       Dob selected = charger.bestMove(role, state, candidateActions);
-                       setDecision(current.turn, selected);
-                       updateStats();
-                   }
-               }
-               return null;
-           }
-       };
-    }
-
 }
