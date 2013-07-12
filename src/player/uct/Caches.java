@@ -21,14 +21,13 @@ import java.util.Set;
  *
  * TODO: potential optimization. Don't cache the state-action pairs when noop is the only choice.
  */
-class UCTCache {
+class Caches {
     public Map<StateActionPair, Double> goalScoreTotal = Maps.newHashMap();
-    public Map<StateActionPair, Double> maxGoalScore = Maps.newHashMap();
     public Map<StateActionPair, Integer> timesTaken = Maps.newHashMap();
     public Map<Set<Dob>, Integer> timesVisited = Maps.newHashMap();
 
     // For sharing a single state visited cache among multiple roles
-    public UCTCache(Map<Set<Dob>, Integer> timesVisited) {
+    public Caches(Map<Set<Dob>, Integer> timesVisited) {
         this.timesVisited = timesVisited;
     }
 
@@ -39,12 +38,7 @@ class UCTCache {
         if (goalScoreTotal.containsKey(key))
             newGoalTotal += goalScoreTotal.get(key);
         goalScoreTotal.put(key, newGoalTotal);
-        
-        double newGoalMax = discountedGoalValue;
-        if (maxGoalScore.containsKey(key))
-        	newGoalMax = Math.max(newGoalMax, maxGoalScore.get(key));
-        maxGoalScore.put(key, newGoalMax);
-        
+
         int newTimesTaken = 1;
         if (timesTaken.containsKey(key))
             newTimesTaken += timesTaken.get(key);
@@ -146,13 +140,9 @@ class UCTCache {
     }
 
     public double monteCarloScore(StateActionPair saPair) {
-    	return goalScoreTotal.get(saPair) / timesTaken.get(saPair);
+        return goalScoreTotal.get(saPair) / timesTaken.get(saPair);
     }
 
-    public double maxGoalScore(StateActionPair saPair) {
-    	return maxGoalScore.get(saPair);
-    }
-    
     private double uctBonus(StateActionPair saPair) {
         int timesVisitedState = timesVisited.get(saPair.getState());
         double UCTBonus = Math.sqrt(Math.log(timesVisitedState) / timesTaken.get(saPair));
