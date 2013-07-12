@@ -23,6 +23,11 @@ public class UCTPlayerFactory {
     public static UCTPlayer<BackwardStateMachine> createProverPlayer(){
         return new UCTPlayer<BackwardStateMachine>() {
             @Override
+            public int numThreads() {
+                return 1;
+            }
+
+            @Override
             public String getTag() {
                 return "[UCT Prover]";
             }
@@ -41,14 +46,22 @@ public class UCTPlayerFactory {
 
             @Override
             protected void reflect() {
+                System.out.println("REFLECT");
                 if (this.verbose)
                     printStats();
+                chargeManager.shutdownNow();
+
             }
         };
     }
 
     public static UCTPropNetPlayer createVanillaPropNetPlayer(){
         return new UCTPropNetPlayer() {
+            @Override
+            public int numThreads() {
+                return 1;
+            }
+
             @Override
             public String getTag() {
                 return "[UCT PropNet Vanilla]";
@@ -64,12 +77,18 @@ public class UCTPlayerFactory {
             protected void reflect() {
                 if (this.verbose)
                     printStats();
+                chargeManager.shutdownNow();
             }
         };
     }
 
     public static UCTPropNetPlayer createNativePropNetPlayer() {
         return new UCTPropNetPlayer() {
+            @Override
+            public int numThreads() {
+                return 1;
+            }
+
             @Override
             public String getTag() {
                 return "[UCT PropNet Native]";
@@ -83,6 +102,7 @@ public class UCTPlayerFactory {
 
             @Override
             protected void reflect() {
+                chargeManager.shutdownNow();
                 if (this.verbose)
                     printStats();
                 // cleanup

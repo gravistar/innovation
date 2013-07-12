@@ -1,30 +1,45 @@
 package player.uct;
 
 import com.google.common.collect.Lists;
+import com.google.common.collect.Sets;
 import rekkura.ggp.machina.GgpStateMachine;
 import rekkura.ggp.milleu.Game;
 import rekkura.ggp.milleu.Player;
 import rekkura.logic.model.Dob;
+import rekkura.logic.model.Rule;
 
 import java.util.List;
 import java.util.Set;
-import java.util.concurrent.Callable;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
+import java.util.concurrent.*;
 
 /**
  * User: david
  * Date: 6/26/13
  * Time: 10:32 AM
  * Description:
- *      Provides the depth charge performing for different uct players (native or vanilla)
- *      M: machine type
+ *      Template class for a multithreaded UCT player
+ *
  */
 public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateBased<M> {
     public boolean verbose = true;
-    public boolean fine = false;
+    public boolean fine = true;
 
-    public UCTCharger charger;
+    // for setting up the threaded chargers
+    public List<Charger> chargers = Lists.newArrayList();
+    public List<M> machines = Lists.newArrayList();
+    public List<Set<Dob>> chargeStates = Lists.newArrayList();
+
+    public Charger accum;
+
+    // WARNING: needs to be instantiated in rules
+    public List<Rule> rules = Lists.newArrayList(); // this is gross, but needed for constructing new machines
+
+    // WARNING: needs to be instantiated in plan
+    public List<Dob> roles;
+
+    public static long fuzz = 100; // fuzz threshold in ms
+
+    // stats
     public volatile long chargeCount = 0;
     public long cacheSizeState = 0;
     public long cacheSizeMove = 0;
@@ -32,13 +47,19 @@ public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateB
 
     // for multithreading
     public abstract int numThreads();
-    public ExecutorService chargeManager = Executors.newFixedThreadPool(numThreads());
+
+    // SUPER IMPORTANT: instances MUST call shutdownNow() in reflect()
+    //    public ThreadPoolExecutor chargeManager = Executors.newFixedThreadPool(numThreads());
+
+    public ExecutorService chargeManager = numThreads() == 1 ? Executors.newSingleThreadExecutor() :
+            Executors.newFixedThreadPool(numThreads());
 
     public abstract String getTag();
 
     @Override
     protected final void move() {
-        explore();
+        System.out.println("MOVING");
+        explore(config.playclock - fuzz);
     }
 
     protected void printStats() {
@@ -54,79 +75,130 @@ public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateB
     }
 
     private void updateStats() {
-        chargeCount++;
-        cacheSizeState = charger.sharedStateCache.size();
+        cacheSizeState = accum.sharedStateCache.size();
         cacheSizeMove = 0;
-        for (Dob key : charger.actionCaches.keySet())
-            cacheSizeMove += charger.actionCaches.get(key).timesTaken.size();
+        for (Dob key : accum.actionCaches.keySet())
+            cacheSizeMove += accum.actionCaches.get(key).timesTaken.size();
     }
 
     protected final void plan() {
-        charger = new UCTCharger(Lists.newArrayList(machine.getActions(machine.getInitial()).keySet()));
-        if (verbose) {
-            System.out.println(getTag() + " Done building charger!");
-            System.out.println(getTag() + " Role: " + role);
+
+        // setup the roles
+        roles = Lists.newArrayList(machine.getActions(machine.getInitial()).keySet());
+
+        // setup the chargers
+        for (int i=0; i<numThreads(); i++)
+            chargers.add(new Charger(roles));
+
+        // setup the accumulator
+        accum = new Charger(roles);
+
+        // setup the machines
+        for (int i=0; i<numThreads(); i++) {
+            if (i==0) {
+                machines.add(machine);
+                continue;
+            }
+            machines.add(constructMachine(rules));
         }
-        explore();
+
+        // setup the charge states
+        for (int i=0; i<numThreads(); i++) {
+            chargeStates.add(Sets.<Dob>newHashSet(machines.get(i).getInitial()));
+        }
+
+        // setup tasks
+        List<Callable<Void>> chargeTasks = Lists.newArrayList();
+        for (int i=0; i<numThreads(); i++)
+            chargeTasks.add(buildChargeTask(chargers.get(i), chargeStates.get(i), machines.get(i)));
+
+        // launch them
+        try {
+            chargeManager.invokeAll(chargeTasks);
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        }
+
+        // startclock is metagame time + first time playclock time
+        long timeLimit = config.startclock - fuzz;
+        explore(timeLimit);
     }
 
-    public final void explore() {
+    public final void explore(long timeLimit) {
         setDecision(anyDecision());
         Game.Turn current = getTurn();
         Set<Dob> state = current.state;
-        List<Dob> candidateActions = machine.getActions(state).get(role);
 
-        int chargeCount = 0;
-        Dob selected = candidateActions.get(0);
-        StateActionPair pair = new StateActionPair(state, selected);
-        UCTCache roleCache = charger.actionCaches.get(role);
+        System.out.println("Exploring: " + state);
 
-        nTurns++;
-        // begin threads
-        // they use the same charger, different machines
-        List<Callable<Void>> chargeTasks = Lists.newArrayList();
-        for (int i=0; i<numThreads(); i++)
-            chargeTasks.add(buildDepthCharger(state, ))
-        chargeManager.invokeAll();
-
-
-        while(validState()) {
-            chargeCount++;
-            charger.fireAndReel(state, machine);
-            selected = charger.bestMove(role, state, candidateActions);
-            setDecision(current.turn, selected);
-            updateStats();
-        }
-        // end threads
-        if (verbose && fine) {
-            System.out.println(getTag() + " Charge count: " + chargeCount);
-            System.out.println(getTag() + " State cache size: " + charger.sharedStateCache.size());
-            if (roleCache.explored(state, selected)) {
-                System.out.println(getTag() + " Role " + role + "] picked move " + selected +
-                        " with monte carlo goal score: " + roleCache.monteCarloScore(pair));
+        // copy over to the states
+        for (int i=0; i<numThreads(); i++) {
+            Set<Dob> chargeState = chargeStates.get(i);
+            synchronized (chargeState) {
+                chargeState.clear();
+                chargeState.addAll(state);
             }
-            else
-                System.out.println(getTag() + " Role " + role + "] no charges completed. picking random move.");
-            System.out.println();
         }
+
+        List<Dob> candidateActions = machine.getActions(state).get(role);
+        Dob selected = candidateActions.get(0);
+
+        // reset accumulator
+        accum = new Charger(roles);
+
+        System.out.println("Turn: " + nTurns);
+        nTurns++;
+        try {
+            Thread.sleep(timeLimit);
+        } catch (InterruptedException e) {
+            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+        }
+
+        // interrupt and join
+        for (int i=0; i<numThreads(); i++) {
+            synchronized (chargers.get(i)) {
+                Charger.accum(accum, chargers.get(i));
+            }
+        }
+
+        selected = accum.bestMove(role, state, candidateActions);
+        setDecision(current.turn, selected);
+
+        updateStats();
+
+        // print out the selected move
+//        if (verbose && fine) {
+//            Caches roleCache = accum.actionCaches.get(role);
+//            StateActionPair pair = new StateActionPair(state, selected);
+//            if (roleCache.explored(state, selected)) {
+//                System.out.println(getTag() + " Role " + role + "] picked move " + selected +
+//                        " with monte carlo goal score: " + roleCache.monteCarloScore(pair));
+//            }
+//            else
+//                System.out.println(getTag() + " Role " + role + "] no charges completed. picking random move.");
+//            System.out.println();
+//        }
     }
 
-    // create a new machine for each one
-    public Callable<Void> buildDepthCharger(final Set<Dob> state, final M machine, final Game.Turn current,
-                                            final List<Dob> candidateActions) {
+    // super dumb/unsafe charge task - depends on above to interrupt
+    // and pull out the caches
+    public Callable<Void> buildChargeTask(final Charger charger,
+                                          final Set<Dob> state,
+                                          final M machine) {
        return new Callable<Void>() {
            @Override
            public Void call() throws Exception {
-               while(validState()) {
+               while(true) {
                    chargeCount++;
-                   charger.fireAndReel(state, machine);
-                   synchronized (current) {
-                       Dob selected = charger.bestMove(role, state, candidateActions);
-                       setDecision(current.turn, selected);
-                       updateStats();
+                   synchronized (charger) {
+                       synchronized (state) {
+                           long start = System.currentTimeMillis();
+                           charger.fireAndReel(state, machine);
+                           long end = System.currentTimeMillis();
+                           System.out.println("charge time: " + (end - start));
+                       }
                    }
                }
-               return null;
            }
        };
     }
