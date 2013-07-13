@@ -108,6 +108,16 @@ public class NativePropNetFactory {
         return compile(net);
     }
 
+    // Returns all the params you need to make a propnet state machine
+    public static Tuple2<Tuple3<String, Integer, Map<Dob, Integer>>, GameLogicContext> compileFromRulesAllParams
+            (List<Rule> rules) {
+        Tuple2<PropNet, GameLogicContext> params = PropNetFactory.createFromRules(rules);
+        return new Tuple2<Tuple3<String, Integer, Map<Dob, Integer>>, GameLogicContext>(
+                compile(params._1),
+                params._2
+        );
+    }
+
     /**
      *
      * @param needed
@@ -144,6 +154,7 @@ public class NativePropNetFactory {
         return null;
     }
 
+    // returns the params you need to make an instance of the compiled class
     public static Tuple3<String, Integer, Map<Dob,Integer>> compile(PropNet vanilla) {
         // setup stuff we need
         Map<Node,Integer> indices = getIndices(vanilla);
