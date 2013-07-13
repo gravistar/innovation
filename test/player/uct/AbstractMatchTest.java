@@ -40,19 +40,26 @@ public abstract class AbstractMatchTest {
     }
 
     @Test
-    public void UCTProverVsMonteCarlo() {
-        generalMatchTest( Lists.newArrayList(TestUtil.PlayerType.UCTProver, TestUtil.PlayerType.MonteCarlo) );
+    public void UCTProverPerf() {
+        generalMatchTest( Lists.newArrayList(TestUtil.PlayerType.UCTProver, TestUtil.PlayerType.Legal) );
     }
 
     @Test
-    public void UCTPropNetVanillaVsUCTProver() {
-        generalMatchTest( Lists.newArrayList(TestUtil.PlayerType.UCTPropNetVanilla, TestUtil.PlayerType.UCTProver) );
+    public void UCTPropNetVanillaPerf() {
+        generalMatchTest( Lists.newArrayList(TestUtil.PlayerType.UCTPropNetVanilla, TestUtil.PlayerType.Legal) );
     }
 
     @Test
-    public void UCTPropNetNativeVsUCTPropNetVanilla() {
+    public void UCTPropNetNativePerf() {
         generalMatchTest( Lists.newArrayList(TestUtil.PlayerType.UCTPropNetNative,
-                TestUtil.PlayerType.UCTPropNetVanilla) );
+                TestUtil.PlayerType.Legal) );
+    }
+
+    @Test
+    public void UCTPropNetNativeThreaded() {
+        generalMatchTest( Lists.newArrayList(TestUtil.PlayerType.UCTPropNetNativeThreaded,
+                TestUtil.PlayerType.Legal) );
+
     }
 
 }

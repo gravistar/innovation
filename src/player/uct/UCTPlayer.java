@@ -1,7 +1,6 @@
 package player.uct;
 
 import com.google.common.collect.Lists;
-import com.google.common.collect.Sets;
 import rekkura.ggp.machina.GgpStateMachine;
 import rekkura.ggp.milleu.Game;
 import rekkura.ggp.milleu.Player;
@@ -58,7 +57,6 @@ public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateB
 
     @Override
     protected final void move() {
-        System.out.println("MOVING");
         explore(config.playclock - fuzz);
     }
 
@@ -101,23 +99,6 @@ public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateB
             machines.add(constructMachine(rules));
         }
 
-        // setup the charge states
-        for (int i=0; i<numThreads(); i++) {
-            chargeStates.add(Sets.<Dob>newHashSet(machines.get(i).getInitial()));
-        }
-
-        // setup tasks
-        List<Callable<Void>> chargeTasks = Lists.newArrayList();
-        for (int i=0; i<numThreads(); i++)
-            chargeTasks.add(buildChargeTask(chargers.get(i), chargeStates.get(i), machines.get(i)));
-
-        // launch them
-        try {
-            chargeManager.invokeAll(chargeTasks);
-        } catch (InterruptedException e) {
-            e.printStackTrace();
-        }
-
         // startclock is metagame time + first time playclock time
         long timeLimit = config.startclock - fuzz;
         explore(timeLimit);
@@ -128,29 +109,37 @@ public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateB
         Game.Turn current = getTurn();
         Set<Dob> state = current.state;
 
-        System.out.println("Exploring: " + state);
-
-        // copy over to the states
-        for (int i=0; i<numThreads(); i++) {
-            Set<Dob> chargeState = chargeStates.get(i);
-            synchronized (chargeState) {
-                chargeState.clear();
-                chargeState.addAll(state);
-            }
-        }
-
         List<Dob> candidateActions = machine.getActions(state).get(role);
         Dob selected = candidateActions.get(0);
 
         // reset accumulator
         accum = new Charger(roles);
 
-        System.out.println("Turn: " + nTurns);
-        nTurns++;
+        // setup tasks
+        long stopTime = System.currentTimeMillis() + timeLimit;
+        List<Callable<Void>> chargeTasks = Lists.newArrayList();
+        for (int i=0; i<numThreads(); i++)
+            // WARNING: multithreading only works for native
+            // even though they are separate state machines, they still share the same
+            // Pool in their maps
+            // may have to create own pool here
+            chargeTasks.add(buildChargeTask(chargers.get(i), state, machines.get(i), stopTime));
+
+        // launch them
         try {
-            Thread.sleep(timeLimit);
+            List<Future<Void>> results = chargeManager.invokeAll(chargeTasks, timeLimit, TimeUnit.MILLISECONDS);
+
+            // join
+            for (Future<Void> result : results)
+                if (!result.isCancelled() && result.isDone())
+                    try {
+                        result.get();
+                    } catch (ExecutionException e) {
+                        e.printStackTrace();
+                    }
+
         } catch (InterruptedException e) {
-            e.printStackTrace();  //To change body of catch statement use File | Settings | File Templates.
+            e.printStackTrace();
         }
 
         // interrupt and join
@@ -160,44 +149,42 @@ public abstract class UCTPlayer<M extends GgpStateMachine> extends Player.StateB
             }
         }
 
+        nTurns++;
         selected = accum.bestMove(role, state, candidateActions);
         setDecision(current.turn, selected);
 
         updateStats();
 
         // print out the selected move
-//        if (verbose && fine) {
-//            Caches roleCache = accum.actionCaches.get(role);
-//            StateActionPair pair = new StateActionPair(state, selected);
-//            if (roleCache.explored(state, selected)) {
-//                System.out.println(getTag() + " Role " + role + "] picked move " + selected +
-//                        " with monte carlo goal score: " + roleCache.monteCarloScore(pair));
-//            }
-//            else
-//                System.out.println(getTag() + " Role " + role + "] no charges completed. picking random move.");
-//            System.out.println();
-//        }
+        if (verbose && fine) {
+            Caches roleCache = accum.actionCaches.get(role);
+            StateActionPair pair = new StateActionPair(state, selected);
+            if (roleCache.explored(state, selected)) {
+                System.out.println(getTag() + " Role " + role + "] picked move " + selected +
+                        " with monte carlo goal score: " + roleCache.monteCarloScore(pair));
+            }
+            else
+                System.out.println(getTag() + " Role " + role + "] no charges completed. picking random move.");
+            System.out.println();
+        }
     }
 
     // super dumb/unsafe charge task - depends on above to interrupt
     // and pull out the caches
     public Callable<Void> buildChargeTask(final Charger charger,
                                           final Set<Dob> state,
-                                          final M machine) {
+                                          final M machine,
+                                          final long stopTime) {
        return new Callable<Void>() {
            @Override
            public Void call() throws Exception {
-               while(true) {
+               while(System.currentTimeMillis() < stopTime) {
                    chargeCount++;
                    synchronized (charger) {
-                       synchronized (state) {
-                           long start = System.currentTimeMillis();
                            charger.fireAndReel(state, machine);
-                           long end = System.currentTimeMillis();
-                           System.out.println("charge time: " + (end - start));
-                       }
                    }
                }
+               return null;
            }
        };
     }

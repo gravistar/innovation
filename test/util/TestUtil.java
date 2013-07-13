@@ -68,14 +68,18 @@ public class TestUtil {
     }
 
     public static enum PlayerType {
+        Legal,
         MonteCarlo,
         UCTProver,
         UCTPropNetVanilla,
-        UCTPropNetNative
+        UCTPropNetNative,
+        UCTPropNetNativeThreaded
     }
 
     public static Player createNewPlayer(PlayerType type) {
         switch (type) {
+            case Legal:
+                return new Player.Legal();
             case MonteCarlo:
                 return new MonteCarloPlayer();
             case UCTProver:
@@ -84,6 +88,8 @@ public class TestUtil {
                 return UCTPlayerFactory.createVanillaPropNetPlayer();
             case UCTPropNetNative:
                 return UCTPlayerFactory.createNativePropNetPlayer();
+            case UCTPropNetNativeThreaded:
+                return UCTPlayerFactory.createNativePropNetPlayerThreads();
         }
         return null;
     }

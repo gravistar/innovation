@@ -8,7 +8,7 @@ package player.uct;
  *      Match tests for connect4
  */
 public class Connect4 extends AbstractMatchTest{
-    public static int startclock = 1000, playclock = 1000;
+    public static int startclock = 10000, playclock = 10000;
     public static String gameName = "connect4.kif";
 
     @Override
@@ -23,7 +23,7 @@ public class Connect4 extends AbstractMatchTest{
 
     @Override
     public int numRuns() {
-        return 20;
+        return 5;
     }
 
     @Override
