@@ -48,18 +48,17 @@ public abstract class AbstractMatchTest {
     public void UCTPropNetVanillaPerf() {
         generalMatchTest( Lists.newArrayList(TestUtil.PlayerType.UCTPropNetVanilla, TestUtil.PlayerType.Legal) );
     }
-
-    @Test
-    public void UCTPropNetNativePerf() {
-        generalMatchTest( Lists.newArrayList(TestUtil.PlayerType.UCTPropNetNative,
-                TestUtil.PlayerType.Legal) );
-    }
-
-    @Test
-    public void UCTPropNetNativeThreaded() {
-        generalMatchTest( Lists.newArrayList(TestUtil.PlayerType.UCTPropNetNativeThreaded,
-                TestUtil.PlayerType.Legal) );
-
-    }
+//
+//    @Test
+//    public void UCTPropNetNativePerf() {
+//        generalMatchTest( Lists.newArrayList(TestUtil.PlayerType.UCTPropNetNative,
+//                TestUtil.PlayerType.Legal) );
+//    }
+//
+//    @Test
+//    public void UCTPropNetNativeThreaded() {
+//        generalMatchTest( Lists.newArrayList(TestUtil.PlayerType.UCTPropNetNativeThreaded,
+//                TestUtil.PlayerType.Legal) );
+//    }
 
 }
