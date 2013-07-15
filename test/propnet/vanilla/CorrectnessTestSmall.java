@@ -16,7 +16,7 @@ import java.util.List;
  */
 public class CorrectnessTestSmall {
 
-    public static int numRuns = 20;
+    public static int numRuns = 5;
 
     @Test
     public void manyButtonsLights() {

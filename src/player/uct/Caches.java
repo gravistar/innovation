@@ -4,6 +4,7 @@ import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
 import com.google.common.collect.Maps;
 import rekkura.logic.model.Dob;
+import util.MapUtil;
 
 import java.util.List;
 import java.util.Map;
@@ -31,18 +32,27 @@ class Caches {
         this.timesVisited = timesVisited;
     }
 
+    public void clear() {
+        goalScoreTotal.clear();
+        timesTaken.clear();
+        timesVisited.clear();
+    }
+
+    public void printStateActionInfo(Set<Dob> state, Dob action) {
+        StateActionPair key = new StateActionPair(state, action);
+        if (!goalScoreTotal.containsKey(key)) {
+            System.out.println("\t Action: " + action + " Avg Score: " + 0.0 + " Times Taken: " + 0);
+            return;
+        }
+        Preconditions.checkArgument(timesTaken.containsKey(key));
+        System.out.println("\tAction: " + action + " Avg Score: " + goalScoreTotal.get(key) / timesTaken.get(key) +
+                " Times Taken: " + timesTaken.get(key));
+    }
+
     public void updateTransitionCaches(Set<Dob> state, Dob action, double discountedGoalValue) {
         StateActionPair key = new StateActionPair(state, action);
-
-        double newGoalTotal = discountedGoalValue;
-        if (goalScoreTotal.containsKey(key))
-            newGoalTotal += goalScoreTotal.get(key);
-        goalScoreTotal.put(key, newGoalTotal);
-
-        int newTimesTaken = 1;
-        if (timesTaken.containsKey(key))
-            newTimesTaken += timesTaken.get(key);
-        timesTaken.put(key, newTimesTaken);
+        MapUtil.incDouble(goalScoreTotal, key, discountedGoalValue);
+        MapUtil.incInt(timesTaken, key, 1);
     }
 
     // taken this action in this state?
@@ -64,8 +74,8 @@ class Caches {
     }
     
     /**
-     * Returns the action with the best monte carlo score
-     * or a random unexplored one if that score is 0
+     * Returns the action with the best expected monte carlo score
+     * in this state or a random unexplored one if that score is 0
      * @param state
      * @param candidateActions
      * @return

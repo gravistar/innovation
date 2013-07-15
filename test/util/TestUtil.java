@@ -83,13 +83,15 @@ public class TestUtil {
             case MonteCarlo:
                 return new MonteCarloPlayer();
             case UCTProver:
-                return UCTPlayerFactory.createProverPlayer();
+                return UCTPlayerFactory.createProverPlayerSingleThread();
             case UCTPropNetVanilla:
-                return UCTPlayerFactory.createVanillaPropNetPlayer();
-            case UCTPropNetNative:
-                return UCTPlayerFactory.createNativePropNetPlayer();
-            case UCTPropNetNativeThreaded:
-                return UCTPlayerFactory.createNativePropNetPlayerThreads();
+                return UCTPlayerFactory.createPropNetPlayerSingleThread();
+//            case UCTPropNetVanilla:
+//                return UCTPlayerFactory.createVanillaPropNetPlayer();
+//            case UCTPropNetNative:
+//                return UCTPlayerFactory.createNativePropNetPlayer();
+//            case UCTPropNetNativeThreaded:
+//                return UCTPlayerFactory.createNativePropNetPlayerThreads();
         }
         return null;
     }
