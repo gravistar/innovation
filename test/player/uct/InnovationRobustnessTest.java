@@ -22,11 +22,11 @@ public class InnovationRobustnessTest extends AbstractRobustnessTest{
 
     @Override
     public int playclock() {
-        return 3000;
+        return 10000;
     }
 
     @Override
     public int numRuns() {
-        return 3;
+        return 1;
     }
 }
