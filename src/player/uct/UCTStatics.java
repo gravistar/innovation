@@ -17,14 +17,31 @@ public class UCTStatics {
     public static Random rand = new Random(System.currentTimeMillis());
     public static double discFactor = .999;
     public static double C = 40;
-    public static double chargeAccumRatio60 = 0.6;
+
+    // fuzz thresholds
     public static int fuzzSuperRisky = 100;
     public static int fuzzRisky = 500;
     public static int fuzzSafe = 1000;
     public static int fuzzSuperSafe = 1200;
     public static long forbiddenTimeout = -1;
+
+    // accum levels
     public static int accumShort = 100;
-    public static int accumProduction = 1500;
+    public static int accumProduction = 200; // should not take long
+
+    // thread priority
+    public static enum ThreadPriority{
+        MAIN(Thread.MAX_PRIORITY),
+        BUILD(Thread.MAX_PRIORITY-1),
+        COPY(Thread.MAX_PRIORITY-2),
+        CHARGE(Thread.MAX_PRIORITY-3);
+
+        public int level;
+
+        ThreadPriority(int level) {
+            this.level = level;
+        }
+    }
 
     public static Dob randomAction(List<Dob> actions) {
         Preconditions.checkArgument(!actions.isEmpty());
