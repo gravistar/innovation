@@ -141,6 +141,7 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
     public final void explore(long chargeDuration, boolean accumulate) {
         Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
         turnChargeCount = 0;
+        List<Integer> machineIndices = Lists.newArrayList();
         long startTime = System.currentTimeMillis();
         setDecision(anyDecision());
         String threadPrefix = "Thread: " + Thread.currentThread().getId() + " ";
@@ -174,6 +175,7 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
                     machinesUse.add(machineFuture.get());
                     chargersUse.add(chargers.get(i));
                     poolsUse.add(poolsCharger.get(i));
+                    machineIndices.add(i);
                 } catch (InterruptedException e) {
                     e.printStackTrace();
                 } catch (ExecutionException e) {
@@ -182,6 +184,10 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
             }
         }
 
+        long machineChargerUpdateStop = System.currentTimeMillis();
+        long actualChargeDuration = chargeStop - machineChargerUpdateStop;
+        long actualChargeStop = machineChargerUpdateStop + actualChargeDuration;
+
         // build the tasks
         for (int i=0; i<numThreads; i++) {
             // translate the state
@@ -189,13 +195,13 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
             for (Dob truth : state)
                 submergedState.add(poolsUse.get(i).dobs.submerge(truth));
             chargeTasks.add(buildChargeTask(chargersUse.get(i),
-                    submergedState, machinesUse.get(i), chargeStop));
+                    submergedState, machinesUse.get(i), actualChargeStop));
         }
 
         // launch them
         try {
             List<Future<Void>> results = chargeManager.invokeAll(chargeTasks,
-                    chargeDuration, TimeUnit.MILLISECONDS);
+                    actualChargeDuration, TimeUnit.MILLISECONDS);
 
             // join
             for (Future<Void> result : results)
@@ -216,40 +222,29 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
             return;
 
         long accumStop = actualChargerStop + accumDuration;
+
         // accumulate!
         accumForRoleState(chargersUse,
                 poolsUse,
                 state,
                 candidateActions,
                 accumStop);
-//        long accumStop = actualChargerStop + accumDuration;
-//        try {
-//            chargeManager.invokeAll(Lists.newArrayList(
-//                    buildAccumulateTask(accum,
-//                                        accumPool,
-//                                        chargersUse,
-//                                        poolsUse,
-//                                        accumStop,
-//                                        state,
-//                                        candidateActions)),
-//                    accumDuration, TimeUnit.MILLISECONDS);
-//            // pick the best move
-//            synchronized (accum) {
-//                Dob selected = accum.bestMove(role, state, candidateActions);
-//                setDecision(current.turn, selected);
-//            }
-//        } catch (InterruptedException e) {
-//            e.printStackTrace();
-//        }
+
+        // set decision!!
+        setDecision(current.turn, accum.bestMove(role, state, candidateActions));
+
         long actualAccumStop = System.currentTimeMillis();
 
         if (logLevel == Level.INFO) {
-            long timeLimit = getTurn().turn == 0 ? config.startclock : config.playclock;
+            long startClockLimit = ( config.startclock - accumDuration - fuzz ) / nPolls + accumDuration + fuzz;
+            long timeLimit = getTurn().turn == 0 ? startClockLimit : config.playclock;
             System.out.println(threadPrefix + " State: " + state);
+            System.out.println(threadPrefix + " Charger machines used: " + machineIndices);
             System.out.println(threadPrefix + " Final Decision: " + getDecision(current.turn));
             System.out.println(threadPrefix + " Total decision time: " + (actualAccumStop - startTime) +
                     " ms out of " + timeLimit);
-            System.out.println(threadPrefix + " Charger time: " + (actualChargerStop - startTime) +
+            System.out.println(threadPrefix + " State machine update time: " + (machineChargerUpdateStop - startTime) + " ms");
+            System.out.println(threadPrefix + " Charger time: " + (actualChargerStop - machineChargerUpdateStop) +
                     " ms out of " + chargeDuration);
             System.out.println(threadPrefix + " Accum time: " + (actualAccumStop - actualChargerStop) +
                     " ms out of " + accumDuration);
@@ -267,11 +262,11 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
        return new Callable<Void>() {
            @Override
            public Void call() throws Exception {
-               Thread.currentThread().setPriority(Thread.MAX_PRIORITY - 2);
+               //Thread.currentThread().setPriority(Thread.MAX_PRIORITY - 2);
                while(System.currentTimeMillis() < stopTime) {
                    turnChargeCount++;
                    synchronized (charger) {
-                           charger.fireAndReel(state, machine);
+                           charger.fireAndReel(state, machine, stopTime);
                    }
                }
                return null;
@@ -286,12 +281,17 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
                                   List<Dob> actions,
                                   long stopTime) {
         for (int i=0; i<chargersToAdd.size(); i++) {
+            long startTime = System.currentTimeMillis();
+            if (logLevel == Level.INFO)
+                System.out.println(">>>> Accumulating charger: " + i);
             Charger toAdd = chargersToAdd.get(i);
             Pool toAddPool = poolsToAdd.get(i);
             Dob toAddRole = toAddPool.dobs.submerge(role);
             Set<Dob> toAddState = Sets.newHashSet(toAddPool.dobs.submerge(state));
             List<Dob> toAddActions = toAddPool.dobs.submerge(actions);
             synchronized (toAdd) {
+                 long endTime = System.currentTimeMillis();
+                 System.out.println(">>>> Acquired lock for charger: " + i  + " took " + (endTime - startTime) + " ms");
                  Charger.accumForRoleState(accum,
                         toAdd,
                         accumPool,
@@ -301,69 +301,5 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
                         toAddActions);
             }
         }
-    }
-
-
-    /**
-     * Accumulates the results across each of the chargers.
-     * Since accumulation can take a bit of time, the caches associated with
-     * the player's role are processed first.
-     *
-     * @param accum
-     * @param chargersToAdd
-     * @param poolToAdd
-     * @param stopTime
-     * @return
-     */
-    public Callable<Charger> buildAccumulateTask(final Charger accum,
-                                                 final Pool accumPool,
-                                                 final List<Charger> chargersToAdd,
-                                                 final List<Pool> poolToAdd,
-                                                 final long stopTime,
-                                                 final Set<Dob> state,
-                                                 final List<Dob> actions) {
-        return new Callable<Charger>() {
-            @Override
-            public Charger call() throws Exception {
-                synchronized (accum) {
-                    for (int i=0; i<chargersToAdd.size(); i++) {
-                        Charger toAdd = chargersToAdd.get(i);
-                        Pool toAddPool = poolToAdd.get(i);
-                        Dob toAddRole = toAddPool.dobs.submerge(role);
-                        Set<Dob> toAddState = Sets.newHashSet(toAddPool.dobs.submerge(state));
-                        List<Dob> toAddActions = toAddPool.dobs.submerge(actions);
-                        synchronized (toAdd) {
-                            boolean timeout = Charger.accumForRoleState(accum,
-                                    toAdd,
-                                    accumPool,
-                                    stopTime,
-                                    toAddRole,
-                                    toAddState,
-                                    toAddActions);
-                            if (timeout)
-                                return accum;
-                        }
-                    }
-                }
-
-                return accum;
-            }
-        };
-    }
-
-    /**
-     * Orders the roles such that first is before any others
-     * @param first
-     *      role that should go first
-     * @param roles
-     * @return
-     */
-    public List<Dob> orderRoles(Dob first, Collection<Dob> roles) {
-        List<Dob> rest = Lists.newArrayList(roles);
-        rest.remove(first);
-        List<Dob> ret = Lists.newArrayList();
-        ret.add(first);
-        ret.addAll(rest);
-        return ret;
     }
 }

@@ -146,11 +146,39 @@ public class ConfigFactory {
                 };
     }
 
+    // copying the propnet can take a while, so launch it as an async task during builder
+    public static Callable<GgpStateMachine> copyPropNetVanillaBuildTask(
+            final Future<Tuple2<PropNet, GameLogicContext>> vanillaPrototypeFuture,
+            final Pool copyPool,
+            final GameLogicContext copyContext) {
+
+        return new Callable<GgpStateMachine>() {
+            @Override
+            public GgpStateMachine call() throws Exception {
+                Tuple2<PropNet, GameLogicContext> vanillaPrototype = vanillaPrototypeFuture.get();
+                Thread.currentThread().setPriority(Thread.MAX_PRIORITY - 2);
+                // read only usage of vanilla
+                PropNet toCopy = vanillaPrototype._1;
+                PropNet copy = PropNetUtil.copyPropNetVanilla(toCopy, copyPool);
+                return PropNetStateMachine.create(new Tuple2<PropNetInterface, GameLogicContext>(copy, copyContext));
+            }
+        };
+    }
+
+    public static Callable<GgpStateMachine> copyPropNetNativeBuildTask(
+            final Future<NativePropNetFactory.NativeParam> nativeFuture,
+            final Pool copyPool,
+            final GameLogicContext copyContext) {
+
+    }
+
     public static Future<GgpStateMachine> vanillaMachineChargerFuture(
             final Future<Tuple2<PropNet, GameLogicContext>> vanillaFuture,
             final GameLogicContext copyContext,
             final Pool copyPool){
         return new Future<GgpStateMachine>(){
+            boolean getCalled = false;
+            GgpStateMachine ret;
 
             @Override
             public boolean cancel(boolean b) {
@@ -169,9 +197,14 @@ public class ConfigFactory {
 
             @Override
             public GgpStateMachine get() throws InterruptedException, ExecutionException {
-                PropNet vanillaNet = vanillaFuture.get()._1;
-                PropNet copy = PropNetUtil.copyPropNetVanilla(vanillaNet, copyPool);
-                return PropNetStateMachine.create(new Tuple2<PropNetInterface, GameLogicContext>(copy, copyContext));
+                if (!getCalled) {
+                    PropNet vanillaNet = vanillaFuture.get()._1;
+                    // read only usage of vanilla
+                    PropNet copy = PropNetUtil.copyPropNetVanilla(vanillaNet, copyPool);
+                    ret = PropNetStateMachine.create(new Tuple2<PropNetInterface, GameLogicContext>(copy, copyContext));
+                    getCalled = true;
+                }
+                return ret;
             }
 
             @Override
@@ -186,6 +219,11 @@ public class ConfigFactory {
             final GameLogicContext copyContext,
             final Pool copyPool) {
         return new Future<GgpStateMachine>(){
+
+            // cache values
+            boolean getCalled = false;
+            GgpStateMachine ret;
+
             @Override
             public boolean cancel(boolean b) {
                 return nativeParamFuture.cancel(b);
@@ -203,27 +241,32 @@ public class ConfigFactory {
 
             @Override
             public GgpStateMachine get() throws InterruptedException, ExecutionException {
-                // make a next game logic context..
-                NativePropNetFactory.NativeParam nativeParam = nativeParamFuture.get();
+                Thread.currentThread().setPriority(Thread.MAX_PRIORITY - 1);
+                if (!getCalled) {
+                    // make a next game logic context..
+                    NativePropNetFactory.NativeParam nativeParam = nativeParamFuture.get();
 
-                // update this to use submerged indices
-                Map<Dob,Integer> copyIndices = Maps.newHashMap();
-                Map<Dob,Integer> toCopy = nativeParam.propIndices;
-                for (Dob key : toCopy.keySet())
-                    copyIndices.put(copyPool.dobs.submerge(key), toCopy.get(key));
+                    // update this to use submerged indices
+                    Map<Dob,Integer> copyIndices = Maps.newHashMap();
+                    Map<Dob,Integer> toCopy = nativeParam.propIndices;
+                    for (Dob key : toCopy.keySet())
+                        copyIndices.put(copyPool.dobs.submerge(key), toCopy.get(key));
 
-                // for the love of god make a new param
-                NativePropNetFactory.NativeParam nativeParamCopy =
-                        new NativePropNetFactory.NativeParam(nativeParam.fullClassName,
-                                nativeParam.size,
-                                copyIndices);
+                    // for the love of god make a new param
+                    NativePropNetFactory.NativeParam nativeParamCopy =
+                            new NativePropNetFactory.NativeParam(nativeParam.fullClassName,
+                                    nativeParam.size,
+                                    copyIndices);
 
-                // pnsm params
-                Tuple2<PropNetInterface, GameLogicContext> pnsmParam =
-                        new Tuple2<PropNetInterface, GameLogicContext>
-                                (NativePropNetFactory.getCompiledNet(nativeParamCopy), copyContext);
+                    // pnsm params
+                    Tuple2<PropNetInterface, GameLogicContext> pnsmParam =
+                            new Tuple2<PropNetInterface, GameLogicContext>
+                                    (NativePropNetFactory.getCompiledNet(nativeParamCopy), copyContext);
 
-                return PropNetStateMachine.create(pnsmParam);
+                    ret = PropNetStateMachine.create(pnsmParam);
+                    getCalled = true;
+                }
+                return ret;
             }
 
             @Override
@@ -310,8 +353,12 @@ public class ConfigFactory {
                 // get the roles
                 List<Dob> copyRoles = Lists.newArrayList(copyContext.getActions(copyContext.getInitial()).keySet());
 
+                // submit the copy tasks
+                Future<GgpStateMachine> copyFuture = buildManager.submit(
+                        copyPropNetVanillaBuildTask(vanillaFuture, copyPool, copyContext));
+
                 // add the stuff
-                machinesCharger.add(vanillaMachineChargerFuture(vanillaFuture, copyContext, copyPool));
+                machinesCharger.add(vanillaMachineChargerFuture(copyFuture, copyContext, copyPool));
                 poolsCharger.add(copyPool);
                 chargers.add(new Charger(copyRoles));
             }

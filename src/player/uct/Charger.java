@@ -51,10 +51,13 @@ class Charger {
         moveHistory.clear();
     }
 
-    public void fireAndReel(Set<Dob> state, StateMachine<Set<Dob>, Dob> machine) {
+    public void fireAndReel(Set<Dob> state, StateMachine<Set<Dob>, Dob> machine, long stopTime) {
         // clear in case of leftover
         clearHistory();
-        Set<Dob> terminal = fire(state, machine);
+        Set<Dob> terminal = fire(state, machine, stopTime);
+
+        if (System.currentTimeMillis() > stopTime)
+            return;
 
         Preconditions.checkArgument(machine.isTerminal(terminal));
         
@@ -64,13 +67,17 @@ class Charger {
         if (verbose)
             System.out.println("[Charge Goals]: " + goals);
 
-        reel(goals);
+        reel(goals, stopTime);
     }
 
     // returns the terminal state
-    public Set<Dob> fire(Set<Dob> state, StateMachine<Set<Dob>, Dob> machine) {
+    public Set<Dob> fire(Set<Dob> state, StateMachine<Set<Dob>, Dob> machine, long stopTime) {
         // do actual player.uct charge
         while (!machine.isTerminal(state)) {
+
+            if (System.currentTimeMillis() > stopTime)
+                return state;
+
             ListMultimap<Dob, Dob> candidateActions = machine.getActions(state);
             Map<Dob, Dob> jointActions = Maps.newHashMap();
             
@@ -94,11 +101,15 @@ class Charger {
     }
 
     // updates the caches on the way up
-    private void reel(Map<Dob,Integer> goals) {
+    private void reel(Map<Dob,Integer> goals, long stopTime) {
     	double discMultiplier = 1.0;
         // update the state caches by going backward up history
         Preconditions.checkArgument(stateHistory.size() == moveHistory.size());
         while (!stateHistory.isEmpty()) {
+
+            if (System.currentTimeMillis() > stopTime)
+                return;
+
             Set<Dob> curState = stateHistory.pop();
             Map<Dob,Dob> curJointMoves = moveHistory.pop();
 
@@ -185,6 +196,10 @@ class Charger {
         Caches addFrom = toAdd.actionCaches.get(role);
 
         for (Dob action : actions) {
+
+            if (stopTime != UCTStatics.forbiddenTimeout && System.currentTimeMillis() > stopTime)
+                return true;
+
             StateActionPair sa = new StateActionPair(state, action);
             if (!addFrom.timesTaken.containsKey(sa) || !addFrom.goalScoreTotal.containsKey(sa))
                 continue;
@@ -201,8 +216,7 @@ class Charger {
                                 accumSa,
                                 addFrom.timesTaken.get(sa));
 
-            if (stopTime != UCTStatics.forbiddenTimeout && System.currentTimeMillis() > stopTime)
-                return true;
+
         }
         return false;
     }
