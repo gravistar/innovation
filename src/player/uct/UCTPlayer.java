@@ -54,9 +54,6 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
 
     // Statistics
     public volatile long turnChargeCount = 0;
-    public long totalChargeCount = 0;
-    public long cacheSizeState = 0;
-    public long cacheSizeMove = 0;
 
     public abstract ConfigInterface buildConfig(List<Rule> rules);
 
@@ -117,29 +114,9 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
         explore(chargeTime, true);
     }
 
-    protected void printStats() {
-        String prefix = "\t";
-        System.out.println();
-        System.out.println(prefix + "=== " + tag + " Performance Stats " + " ===");
-        int turn = getTurn().turn;
-        if (turn == 0)
-            System.out.println("Error: No statistics available!");
-        System.out.println(prefix + "\tAverage Charges Per Turn: " + (((double) totalChargeCount) / turn));
-        System.out.println(prefix + "\tDistinct States Visited: " + cacheSizeState);
-        System.out.println(prefix + "\tDistinct Move/State Pairs: " + cacheSizeMove);
-        System.out.println();
-    }
-
-    private void updateStats() {
-        cacheSizeState = accum.sharedStateCache.size();
-        cacheSizeMove = 0;
-        for (Dob key : accum.actionCaches.keySet())
-            cacheSizeMove += accum.actionCaches.get(key).timesTaken.size();
-    }
-
     // duration has fuzz subtracted already
     public final void explore(long chargeDuration, boolean accumulate) {
-        Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+        Thread.currentThread().setPriority(UCTStatics.ThreadPriority.MAIN.level);
         turnChargeCount = 0;
         List<Integer> machineIndices = Lists.newArrayList();
         long startTime = System.currentTimeMillis();
@@ -251,7 +228,6 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
             System.out.println(threadPrefix + " Charges this turn: " + turnChargeCount);
             accum.printActionStats(role, state, candidateActions);
         }
-        updateStats();
         // POTENTIALLY PRUNE CACHES HERE
     }
 
@@ -262,12 +238,12 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
        return new Callable<Void>() {
            @Override
            public Void call() throws Exception {
-               //Thread.currentThread().setPriority(Thread.MAX_PRIORITY - 2);
+               Thread.currentThread().setPriority(UCTStatics.ThreadPriority.CHARGE.level);
                while(System.currentTimeMillis() < stopTime) {
-                   turnChargeCount++;
                    synchronized (charger) {
                            charger.fireAndReel(state, machine, stopTime);
                    }
+                   turnChargeCount++;
                }
                return null;
            }
@@ -281,17 +257,12 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
                                   List<Dob> actions,
                                   long stopTime) {
         for (int i=0; i<chargersToAdd.size(); i++) {
-            long startTime = System.currentTimeMillis();
-            if (logLevel == Level.INFO)
-                System.out.println(">>>> Accumulating charger: " + i);
             Charger toAdd = chargersToAdd.get(i);
             Pool toAddPool = poolsToAdd.get(i);
             Dob toAddRole = toAddPool.dobs.submerge(role);
             Set<Dob> toAddState = Sets.newHashSet(toAddPool.dobs.submerge(state));
             List<Dob> toAddActions = toAddPool.dobs.submerge(actions);
             synchronized (toAdd) {
-                 long endTime = System.currentTimeMillis();
-                 System.out.println(">>>> Acquired lock for charger: " + i  + " took " + (endTime - startTime) + " ms");
                  Charger.accumForRoleState(accum,
                         toAdd,
                         accumPool,
