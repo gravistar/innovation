@@ -47,4 +47,9 @@ public class UCTStatics {
         Preconditions.checkArgument(!actions.isEmpty());
         return actions.get(rand.nextInt(actions.size()));
     }
+
+    public static int numBuildThreads (int numThreads) {
+        return 2 + 2 * numThreads;
+    }
+
 }
