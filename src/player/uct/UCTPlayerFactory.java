@@ -33,7 +33,7 @@ public class UCTPlayerFactory {
         };
     }
 
-    public static UCTPlayer createPropNetPlayerSingleThread() {
+    public static UCTPlayer createPropNetPlayerVanillaSingleThread() {
         final ExecutorService buildManager = Executors.newFixedThreadPool(2);
         return new UCTPlayer() {
             @Override
@@ -43,6 +43,40 @@ public class UCTPlayerFactory {
 
             @Override
             protected void reflect() {
+                if (logLevel == Level.INFO)
+                    printStats();
+                buildManager.shutdownNow();
+            }
+        };
+    }
+
+    public static UCTPlayer createPropNetPlayerNativeSingleThread() {
+        final ExecutorService buildManager = Executors.newFixedThreadPool(2);
+        return new UCTPlayer() {
+            @Override
+            public ConfigInterface buildConfig(List<Rule> rules) {
+                return ConfigFactory.singlePropNetNativeConfig(rules, buildManager);
+            }
+
+            @Override
+            protected void reflect() {
+                if (logLevel == Level.INFO)
+                    printStats();
+                buildManager.shutdownNow();
+            }
+        };
+    }
+
+    public static UCTPlayer createPropNetPlayerNativeFullThread() {
+        final ExecutorService buildManager = Executors.newFixedThreadPool(2);
+        return new UCTPlayer() {
+            @Override
+            public ConfigInterface buildConfig(List<Rule> rules) {
+                return ConfigFactory.fullKaskadeConfig(rules, buildManager);
+            }
+
+            @Override
+            public void reflect() {
                 if (logLevel == Level.INFO)
                     printStats();
                 buildManager.shutdownNow();
