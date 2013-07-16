@@ -68,10 +68,31 @@ public class NativePropNetFactory {
     }
 
     public static Tuple2<NativePropNet, GameLogicContext> createFromRules(List<Rule> rules) {
-        Tuple2<PropNet, GameLogicContext> needed = PropNetFactory.createFromRules(rules);
-        PropNet vanilla = needed._1;
-        NativePropNet net = getCompiledNet(compile(vanilla));
-        return new Tuple2<NativePropNet, GameLogicContext>(net, needed._2);
+        Tuple2<NativeParam, GameLogicContext> nativeParams =
+            compileNativeParamsFromRules(rules);
+        NativePropNet net = getCompiledNet(nativeParams._1);
+        return new Tuple2<NativePropNet, GameLogicContext>(net, nativeParams._2);
+    }
+
+    public static Tuple2<NativeParam, GameLogicContext> compileNativeParamsFromRules
+        (List<Rule> rules) {
+        Tuple2<PropNet, GameLogicContext> params = PropNetFactory.createFromRules(rules);
+        return new Tuple2<NativeParam, GameLogicContext>(
+                compile(params._1),
+                params._2
+        );
+    }
+
+    // Returns all the params you need to make a new compile net
+    // note, this compiled net will have the pool of the GameLogicContext
+    // thus, it's possible for multiple native nets to share the same pool.
+    // does compilation here
+    public static Tuple2<NativeParam, GameLogicContext> compileNativeParams
+            (Tuple2<PropNet, GameLogicContext> params) {
+        return new Tuple2<NativeParam, GameLogicContext>(
+                compile(params._1),
+                params._2
+        );
     }
 
     // just for debugging
@@ -103,19 +124,9 @@ public class NativePropNetFactory {
         return ret;
     }
 
-    public static Tuple3<String, Integer, Map<Dob, Integer>> compileFromRules(List<Rule> rules) {
+    public static NativeParam compileFromRules(List<Rule> rules) {
         PropNet net = PropNetFactory.createFromRulesOnlyNet(rules);
         return compile(net);
-    }
-
-    // Returns all the params you need to make a propnet state machine
-    public static Tuple2<Tuple3<String, Integer, Map<Dob, Integer>>, GameLogicContext> compileFromRulesAllParams
-            (List<Rule> rules) {
-        Tuple2<PropNet, GameLogicContext> params = PropNetFactory.createFromRules(rules);
-        return new Tuple2<Tuple3<String, Integer, Map<Dob, Integer>>, GameLogicContext>(
-                compile(params._1),
-                params._2
-        );
     }
 
     /**
@@ -124,15 +135,15 @@ public class NativePropNetFactory {
      * @return
      *      A working NativePropNet if
      */
-    public static NativePropNet getCompiledNet(Tuple3<String, Integer, Map<Dob,Integer>> needed) {
-        String fullName = needed._1;
+    public static NativePropNet getCompiledNet(NativeParam needed) {
+        String fullName = needed.fullClassName;
         // not necessary, but i'd rather not cause a class load exception if
         // i can avoid it
         if (fullName == BAD_CLASSNAME)
             return null;
 
-        int size = needed._2;
-        Map<Dob,Integer> propIndices = needed._3;
+        int size = needed.size;
+        Map<Dob,Integer> propIndices = needed.propIndices;
         try {
             System.out.println("[Native] Loading class " + fullName);
             Class<?> clazz = Class.forName(fullName);
@@ -154,8 +165,10 @@ public class NativePropNetFactory {
         return null;
     }
 
+    // getSubmergedPropIndices()
+
     // returns the params you need to make an instance of the compiled class
-    public static Tuple3<String, Integer, Map<Dob,Integer>> compile(PropNet vanilla) {
+    public static NativeParam compile(PropNet vanilla) {
         // setup stuff we need
         Map<Node,Integer> indices = getIndices(vanilla);
         Map<Dob,Integer> propIndices = getPropIndices(vanilla.props, indices);
@@ -169,13 +182,13 @@ public class NativePropNetFactory {
         int jniCompileExitCode = compileJNI(className, top, indices);
 
         if (javaCompileExitCode == BAD_EXIT || jniCompileExitCode == BAD_EXIT) {
-            return new Tuple3<String, Integer, Map<Dob, Integer>>(BAD_CLASSNAME, top.size(), propIndices);
+            return new NativeParam(BAD_CLASSNAME, top.size(), propIndices);
         }
 
         // try making the class
         String fullName = fullClassName(packageName, className);
 
-        return new Tuple3<String, Integer, Map<Dob, Integer>>(fullName, top.size(), propIndices);
+        return new NativeParam(fullName, top.size(), propIndices);
     }
 
     public static String makeClassName() {
@@ -215,7 +228,7 @@ public class NativePropNetFactory {
      *
      * @param className
      * @return
-     *      0 on success, -1 otherwise
+     *      0 on success, BAD_EXIT otherwise
      */
     public static int compileJavaClass(String className) {
         try {
@@ -404,4 +417,16 @@ public class NativePropNetFactory {
         }
         return rhs;
     }
+
+    public static class NativeParam {
+        public String fullClassName;
+        public int size;
+        public Map<Dob, Integer> propIndices;
+        public NativeParam(String fullClassName, int size, Map<Dob, Integer> propIndices) {
+            this.fullClassName = fullClassName;
+            this.size = size;
+            this.propIndices = propIndices;
+        }
+    }
+
 }
