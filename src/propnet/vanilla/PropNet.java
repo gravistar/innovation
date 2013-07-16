@@ -5,6 +5,7 @@ import com.google.common.collect.Maps;
 import propnet.PropNetInterface;
 import propnet.vanilla.core.Node;
 import propnet.vanilla.core.NodeFns;
+import rekkura.ggp.milleu.GameLogicContext;
 import rekkura.logic.model.Dob;
 
 import java.util.List;
@@ -75,6 +76,8 @@ public class PropNet implements PropNetInterface {
     public long size() {
         return tnet.size();
     }
+
+
 
     // not ALWAYS has an or as input
     public StringBuilder notString(Node not, Map<Node, Dob> invProps, int nTab) {

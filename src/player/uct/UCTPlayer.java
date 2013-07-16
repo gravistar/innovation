@@ -98,8 +98,13 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
         this.role = accumPool.dobs.submerge(role);
 
         // startclock is metagame time + first time playclock time
-        long timeLimit = config.startclock - fuzz;
-        explore(timeLimit);
+        long timeLeft = config.startclock - fuzz;
+
+        // poll at intervals
+        int nPolls = 3;
+        long duration = timeLeft / nPolls;
+        for (int i=0; i<nPolls; i++)
+            explore(duration);
     }
 
     @Override
@@ -137,7 +142,6 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
             System.out.println(threadPrefix + "Turn: " + getTurn().turn);
             System.out.println(threadPrefix + "Init Decision: " + getDecision(getTurn().turn));
         }
-
 
         Game.Turn current = getTurn();
         Set<Dob> state = current.state;
@@ -185,7 +189,8 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
 
         // launch them
         try {
-            List<Future<Void>> results = chargeManager.invokeAll(chargeTasks, chargeDuration, TimeUnit.MILLISECONDS);
+            List<Future<Void>> results = chargeManager.invokeAll(chargeTasks,
+                    chargeDuration, TimeUnit.MILLISECONDS);
 
             // join
             for (Future<Void> result : results)
@@ -228,8 +233,6 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
 //        }
         long actualAccumStop = System.currentTimeMillis();
 
-        // POTENTIALLY PRUNE HERE
-
         if (logLevel == Level.INFO) {
             System.out.println(threadPrefix + " Fuzz: " + fuzz);
             System.out.println(threadPrefix + " State: " + state);
@@ -254,6 +257,9 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
 //                System.out.println(tag + " [ Thread: " + Thread.currentThread().getId() + " Role " + role + "] no charges completed. picking random move.");
 //            System.out.println();
 //        }
+
+
+        // POTENTIALLY PRUNE CACHES HERE
     }
 
     public Callable<Void> buildChargeTask(final Charger charger,

@@ -28,10 +28,9 @@ public interface ConfigInterface {
     public Level getLoggingLevel();
 
     // Depth charger components
-    public List<Charger> createChargers();
-    public List<Future<GgpStateMachine>> createChargeMachines(); // can be asynchronous
-    public List<Pool> createChargePools();                  // pools associated with each charge machine
-                                                            // should change to futures...
+    public List<Future<GgpStateMachine>> createChargeMachines(); // async
+    public List<Charger> createChargers();                       // never async
+    public List<Pool> createChargePools();                       // pools associated with each charge machine
 
     // Master components
     public GgpStateMachine createMainMachine();             // used for this.machine
