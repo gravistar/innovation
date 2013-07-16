@@ -30,8 +30,6 @@ public class UCTPlayerFactory {
 
             @Override
             protected void reflect() {
-                if (logLevel == Level.INFO)
-                    printStats();
                 buildManager.shutdownNow();
             }
         };
@@ -47,8 +45,6 @@ public class UCTPlayerFactory {
 
             @Override
             protected void reflect() {
-                if (logLevel == Level.INFO)
-                    printStats();
                 buildManager.shutdownNow();
             }
         };
@@ -64,8 +60,6 @@ public class UCTPlayerFactory {
 
             @Override
             protected void reflect() {
-                if (logLevel == Level.INFO)
-                    printStats();
                 buildManager.shutdownNow();
             }
         };
@@ -82,8 +76,6 @@ public class UCTPlayerFactory {
 
             @Override
             public void reflect() {
-                if (logLevel == Level.INFO)
-                    printStats();
                 buildManager.shutdownNow();
             }
         };

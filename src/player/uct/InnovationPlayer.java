@@ -30,13 +30,10 @@ public class InnovationPlayer extends UCTPlayer{
 
     @Override
     protected void reflect() {
-        if (logLevel == Level.INFO)
-            printStats();
-
         // shutdown builds if they're still going
         buildManager.shutdownNow();
 
         // cleanup!
-        NativeUtil.deleteGeneratedFiles();
+        // NativeUtil.deleteGeneratedFiles();
     }
 }
