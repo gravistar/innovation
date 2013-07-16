@@ -7,7 +7,6 @@ import propnet.PropNetInterface;
 import propnet.nativecode.NativePropNetFactory;
 import propnet.util.PropNetUtil;
 import propnet.util.Tuple2;
-import propnet.util.Tuple3;
 import propnet.vanilla.PropNet;
 import propnet.vanilla.PropNetFactory;
 import rekkura.ggp.machina.BackwardStateMachine;
@@ -204,15 +203,18 @@ public class ConfigFactory {
                 Map<Dob,Integer> copyIndices = Maps.newHashMap();
                 Map<Dob,Integer> toCopy = nativeParam.propIndices;
                 for (Dob key : toCopy.keySet())
-                    toCopy.put(copyPool.dobs.submerge(key), toCopy.get(key));
+                    copyIndices.put(copyPool.dobs.submerge(key), toCopy.get(key));
 
-                // update param
-                nativeParam.propIndices = copyIndices;
+                // for the love of god make a new param
+                NativePropNetFactory.NativeParam nativeParamCopy =
+                        new NativePropNetFactory.NativeParam(nativeParam.fullClassName,
+                                nativeParam.size,
+                                copyIndices);
 
                 // pnsm params
                 Tuple2<PropNetInterface, GameLogicContext> pnsmParam =
                         new Tuple2<PropNetInterface, GameLogicContext>
-                                (NativePropNetFactory.getCompiledNet(nativeParam), copyContext);
+                                (NativePropNetFactory.getCompiledNet(nativeParamCopy), copyContext);
 
                 return PropNetStateMachine.create(pnsmParam);
             }
@@ -287,6 +289,7 @@ public class ConfigFactory {
             }
         }
 
+        // VANILLAS
         if (kaskadeLevel.id >= KaskadeLevel.VANILLA.id){
             final Future<Tuple2<PropNet, GameLogicContext>> vanillaFuture = buildManager.submit(
                     vanillaBuildTask(rules));
@@ -306,6 +309,7 @@ public class ConfigFactory {
                 chargers.add(new Charger(copyRoles));
             }
 
+            // NATIVES
             if (kaskadeLevel.id >= KaskadeLevel.NATIVE.id) {
                 final Future<NativePropNetFactory.NativeParam> nativeParamFuture = buildManager.submit(
                         nativeBuildTask(vanillaFuture));

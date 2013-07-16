@@ -73,7 +73,7 @@ public class TestUtil {
         UCTProver,
         UCTPropNetVanilla,
         UCTPropNetNative,
-        UCTPropNetNativeThreaded
+        UCTPropNetNativeFullThreaded
     }
 
     public static Player createNewPlayer(PlayerType type) {
@@ -85,13 +85,11 @@ public class TestUtil {
             case UCTProver:
                 return UCTPlayerFactory.createProverPlayerSingleThread();
             case UCTPropNetVanilla:
-                return UCTPlayerFactory.createPropNetPlayerSingleThread();
-//            case UCTPropNetVanilla:
-//                return UCTPlayerFactory.createVanillaPropNetPlayer();
-//            case UCTPropNetNative:
-//                return UCTPlayerFactory.createNativePropNetPlayer();
-//            case UCTPropNetNativeThreaded:
-//                return UCTPlayerFactory.createNativePropNetPlayerThreads();
+                return UCTPlayerFactory.createPropNetPlayerVanillaSingleThread();
+            case UCTPropNetNative:
+                return UCTPlayerFactory.createPropNetPlayerNativeSingleThread();
+            case UCTPropNetNativeFullThreaded:
+                return UCTPlayerFactory.createPropNetPlayerNativeFullThread();
         }
         return null;
     }
