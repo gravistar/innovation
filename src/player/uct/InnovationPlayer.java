@@ -20,7 +20,8 @@ public class InnovationPlayer extends UCTPlayer{
 
     // needed for PlayerServer interop
     public InnovationPlayer() {
-        buildManager = Executors.newFixedThreadPool(2);
+        buildManager = Executors.newFixedThreadPool(
+                UCTStatics.numBuildThreads(Runtime.getRuntime().availableProcessors()));
     }
 
     @Override

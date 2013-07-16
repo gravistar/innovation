@@ -15,13 +15,8 @@ import java.util.logging.Level;
  *      Builds various UCT Players
  */
 public class UCTPlayerFactory {
-
-    public static int numBuildThreads (int numThreads) {
-        return 2 + 2 * numThreads;
-    }
-
     public static UCTPlayer createProverPlayerSingleThread() {
-        final ExecutorService buildManager = Executors.newFixedThreadPool(numBuildThreads(1));
+        final ExecutorService buildManager = Executors.newFixedThreadPool(UCTStatics.numBuildThreads(1));
         return new UCTPlayer() {
             @Override
             public ConfigInterface buildConfig(List<Rule> rules) {
@@ -36,7 +31,7 @@ public class UCTPlayerFactory {
     }
 
     public static UCTPlayer createPropNetPlayerVanillaSingleThread() {
-        final ExecutorService buildManager = Executors.newFixedThreadPool(numBuildThreads(1));
+        final ExecutorService buildManager = Executors.newFixedThreadPool(UCTStatics.numBuildThreads(1));
         return new UCTPlayer() {
             @Override
             public ConfigInterface buildConfig(List<Rule> rules) {
@@ -51,7 +46,7 @@ public class UCTPlayerFactory {
     }
 
     public static UCTPlayer createPropNetPlayerNativeSingleThread() {
-        final ExecutorService buildManager = Executors.newFixedThreadPool(numBuildThreads(1));
+        final ExecutorService buildManager = Executors.newFixedThreadPool(UCTStatics.numBuildThreads(1));
         return new UCTPlayer() {
             @Override
             public ConfigInterface buildConfig(List<Rule> rules) {
@@ -67,7 +62,7 @@ public class UCTPlayerFactory {
 
     public static UCTPlayer createPropNetPlayerNativeFullThread() {
         final ExecutorService buildManager = Executors.newFixedThreadPool(
-                numBuildThreads(Runtime.getRuntime().availableProcessors()));
+                UCTStatics.numBuildThreads(Runtime.getRuntime().availableProcessors()));
         return new UCTPlayer() {
             @Override
             public ConfigInterface buildConfig(List<Rule> rules) {

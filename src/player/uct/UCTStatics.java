@@ -20,7 +20,7 @@ public class UCTStatics {
 
     // fuzz thresholds
     public static int fuzzSuperRisky = 100;
-    public static int fuzzRisky = 500;
+    public static int fuzzRisky = 200;
     public static int fuzzSafe = 1000;
     public static int fuzzSuperSafe = 1200;
     public static long forbiddenTimeout = -1;
@@ -47,4 +47,9 @@ public class UCTStatics {
         Preconditions.checkArgument(!actions.isEmpty());
         return actions.get(rand.nextInt(actions.size()));
     }
+
+    public static int numBuildThreads (int numThreads) {
+        return 2 + 2 * numThreads;
+    }
+
 }

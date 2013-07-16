@@ -20,7 +20,6 @@ import java.util.Set;
  * <li> Number of times a state was visited. <em>This is shared between all the roles</em>
  * </ul>
  *
- * TODO: potential optimization. Don't cache the state-action pairs when noop is the only choice.
  */
 class Caches {
     public Map<StateActionPair, Double> goalScoreTotal = Maps.newHashMap();

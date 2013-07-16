@@ -199,70 +199,6 @@ public class ConfigFactory {
         };
     }
 
-    public static Future<GgpStateMachine> vanillaMachineChargerFuture(
-            final Future<GgpStateMachine> vanillaCopyFuture){
-        return new Future<GgpStateMachine>(){
-
-            @Override
-            public boolean cancel(boolean b) {
-                return vanillaCopyFuture.cancel(b);
-            }
-
-            @Override
-            public boolean isCancelled() {
-                return vanillaCopyFuture.isCancelled();
-            }
-
-            @Override
-            public boolean isDone() {
-                return vanillaCopyFuture.isDone();
-            }
-
-            @Override
-            public GgpStateMachine get() throws InterruptedException, ExecutionException {
-                return vanillaCopyFuture.get();
-            }
-
-            @Override
-            public GgpStateMachine get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException, TimeoutException {
-                return get();
-            }
-        };
-    }
-
-    public static Future<GgpStateMachine> nativeMachineChargerFuture(
-            final Future<GgpStateMachine> nativeCopyFuture) {
-        return new Future<GgpStateMachine>(){
-            @Override
-            public boolean cancel(boolean b) {
-                return nativeCopyFuture.cancel(b);
-            }
-
-            @Override
-            public boolean isCancelled() {
-                return nativeCopyFuture.isCancelled();
-            }
-
-            @Override
-            public boolean isDone() {
-                return nativeCopyFuture.isDone();
-            }
-
-            @Override
-            public GgpStateMachine get() throws InterruptedException, ExecutionException {
-                return nativeCopyFuture.get();
-            }
-
-            @Override
-            public GgpStateMachine get(long l, TimeUnit timeUnit) throws InterruptedException, ExecutionException,
-                    TimeoutException {
-                return get();
-            }
-        };
-    }
-
-
-    // buildManager should be an executor with 2 threads
     // <3 kaskade
     public static ConfigInterface kaskadeConfig(final List<Rule> rules,
                                                 final ExecutorService buildManager,
@@ -342,7 +278,7 @@ public class ConfigFactory {
                         copyPropNetVanillaBuildTask(vanillaFuture, copyPool, copyContext));
 
                 // add the stuff
-                machinesCharger.add(vanillaMachineChargerFuture(copyFuture));
+                machinesCharger.add(copyFuture);
                 poolsCharger.add(copyPool);
                 chargers.add(new Charger(copyRoles));
             }
@@ -366,7 +302,7 @@ public class ConfigFactory {
                             copyPropNetNativeBuildTask(nativeParamFuture, copyPool, copyContext));
 
                     // add the stuff
-                    machinesCharger.add(nativeMachineChargerFuture(copyFuture));
+                    machinesCharger.add(copyFuture);
                     poolsCharger.add(copyPool);
                     chargers.add(new Charger(copyRoles));
                 }
