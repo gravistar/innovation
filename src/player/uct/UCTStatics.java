@@ -23,6 +23,8 @@ public class UCTStatics {
     public static int fuzzSafe = 1000;
     public static int fuzzSuperSafe = 1200;
     public static long forbiddenTimeout = -1;
+    public static int accumShort = 100;
+    public static int accumProduction = 1500;
 
     public static Dob randomAction(List<Dob> actions) {
         Preconditions.checkArgument(!actions.isEmpty());

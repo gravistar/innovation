@@ -83,13 +83,13 @@ public class MachineTestUtil {
             // do the dobs in the states have the same name?
             switch (testType) {
                 case ASSERT: {
-                    assertTrue("mismatch between state! pnsm: " + pnsmState + " bsm: " + bsmState, dobMatch(bsmState, pnsmState));
+                    assertTrue("mismatch between state! iteration: " + iteration + " pnsm: " + pnsmState + " bsm: " + bsmState, dobMatch(bsmState, pnsmState));
                 }
                 case CUSTOM: {
                     boolean match = dobMatch(bsmState, pnsmState);
                     if (!match) {
                         System.out.println(gameName + " failed!");
-                        System.out.println("mismatch between state! pnsm: " + pnsmState + " bsm: " + bsmState);
+                        System.out.println("mismatch between state! iteration: " + iteration + " pnsm: " + pnsmState + " bsm: " + bsmState);
                         System.out.println();
                         return;
                     }
@@ -106,12 +106,12 @@ public class MachineTestUtil {
             // do the dobs in the roles have the same name?
             switch (testType) {
                 case ASSERT:
-                    assertTrue("mismatch between roles! pnsm: " + pnsmRoles + " bsm: " + bsmRoles, dobMatch(bsmRoles, pnsmRoles));
+                    assertTrue("mismatch between roles! iteration: " + iteration + " pnsm: " + pnsmRoles + " bsm: " + bsmRoles, dobMatch(bsmRoles, pnsmRoles));
                 case CUSTOM: {
                     boolean match = dobMatch(pnsmRoles, bsmRoles);
                     if (!match) {
                         System.out.println(gameName + " failed!");
-                        System.out.println("mismatch between roles! pnsm: " + pnsmRoles + " bsm: " + bsmRoles);
+                        System.out.println("mismatch between roles! iteration: " + iteration + " pnsm: " + pnsmRoles + " bsm: " + bsmRoles);
                         System.out.println();
                         return;
                     }
@@ -132,13 +132,13 @@ public class MachineTestUtil {
                 // just need to check for size since the matching takes care of name comparison
                 switch (testType) {
                     case ASSERT:
-                        assertTrue("mismatch between actions for role" + role, matchedActions.keySet().size() ==
+                        assertTrue("mismatch between actions! iteration: " + iteration + " role " + role, matchedActions.keySet().size() ==
                                 bsmRoleActions.size());
                     case CUSTOM: {
                         boolean match = matchedActions.keySet().size() == bsmRoleActions.size();
                         if (!match) {
                             System.out.println(gameName + " failed!");
-                            System.out.println("mismatch between actions for role" + role);
+                            System.out.println("mismatch between actions! iteration: " + " role " + role);
                             System.out.println();
                             return;
                         }
@@ -166,12 +166,12 @@ public class MachineTestUtil {
 
             switch (testType) {
                 case ASSERT:
-                    assertTrue("mismatch between terminal!", bsm.isTerminal(bsmState) == pnsm.isTerminal(pnsmState));
+                    assertTrue("mismatch between terminal! iteration: " + iteration, bsm.isTerminal(bsmState) == pnsm.isTerminal(pnsmState));
                 case CUSTOM: {
                     boolean passed = bsm.isTerminal(bsmState) == pnsm.isTerminal(pnsmState);
                     if (!passed) {
                         System.out.println(gameName + " failed!");
-                        System.out.println("mismatch between terminal!");
+                        System.out.println("mismatch between terminal! iteration: " + iteration);
                         System.out.println();
                         return;
                     }

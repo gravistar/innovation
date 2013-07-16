@@ -10,7 +10,7 @@ import java.io.IOException;
  * Date: 7/15/13
  * Time: 8:45 PM
  * Description:
- *      The actual player!~!
+ *      The application main
  */
 public class Innovation {
 
