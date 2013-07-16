@@ -37,6 +37,8 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
     public int numThreads;
     public int fuzz;
     public Level logLevel;
+    public int accumDuration;
+    public int nPolls = 3;                                // number of start clock explores
 
     // Depth chargers
     public List<Charger> chargers;
@@ -51,7 +53,8 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
                                           // shutdownNow() should be called in reflect
 
     // Statistics
-    public volatile long chargeCount = 0;
+    public volatile long turnChargeCount = 0;
+    public long totalChargeCount = 0;
     public long cacheSizeState = 0;
     public long cacheSizeMove = 0;
 
@@ -66,6 +69,7 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
         numThreads = configUCT.numThreads();
         fuzz = configUCT.getFuzz();
         logLevel = configUCT.getLoggingLevel();
+        accumDuration = configUCT.getAccumDuration();
 
         // init masters
         accumPool = configUCT.getAccumulatorPool();
@@ -84,8 +88,6 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
         chargeManager = numThreads == 1 ? Executors.newSingleThreadExecutor() :
                 Executors.newFixedThreadPool(numThreads);
 
-        System.out.println("In prepare");
-
         // check everything is initialized
         Preconditions.checkNotNull(accumPool);
         Preconditions.checkNotNull(accum);
@@ -94,22 +96,25 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
         Preconditions.checkNotNull(machinesCharger);
         Preconditions.checkNotNull(poolsCharger);
 
-        // make sure the role is in here
+        // make sure accumulator can see our role
         this.role = accumPool.dobs.submerge(role);
 
         // startclock is metagame time + first time playclock time
-        long timeLeft = config.startclock - fuzz;
+        long chargeTime = config.startclock - accumDuration - fuzz;
 
-        // poll at intervals
-        int nPolls = 3;
-        long duration = timeLeft / nPolls;
-        for (int i=0; i<nPolls; i++)
-            explore(duration);
+        // poll at intervals to see if state machine finished
+        long duration = chargeTime / nPolls;
+        for (int i=0; i<nPolls; i++) {
+            // only accumulate the last one
+            boolean accum = i == nPolls - 1;
+            explore(duration, accum);
+        }
     }
 
     @Override
     protected final void move() {
-        explore(config.playclock - fuzz);
+        long chargeTime = config.playclock - accumDuration - fuzz;
+        explore(chargeTime, true);
     }
 
     protected void printStats() {
@@ -119,7 +124,7 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
         int turn = getTurn().turn;
         if (turn == 0)
             System.out.println("Error: No statistics available!");
-        System.out.println(prefix + "\tAverage Charges Per Turn: " + (((double) chargeCount) / turn));
+        System.out.println(prefix + "\tAverage Charges Per Turn: " + (((double) totalChargeCount) / turn));
         System.out.println(prefix + "\tDistinct States Visited: " + cacheSizeState);
         System.out.println(prefix + "\tDistinct Move/State Pairs: " + cacheSizeMove);
         System.out.println();
@@ -132,15 +137,16 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
             cacheSizeMove += accum.actionCaches.get(key).timesTaken.size();
     }
 
-
     // duration has fuzz subtracted already
-    public final void explore(long duration) {
+    public final void explore(long chargeDuration, boolean accumulate) {
+        Thread.currentThread().setPriority(Thread.MAX_PRIORITY);
+        turnChargeCount = 0;
         long startTime = System.currentTimeMillis();
         setDecision(anyDecision());
         String threadPrefix = "Thread: " + Thread.currentThread().getId() + " ";
         if (logLevel == Level.INFO) {
-            System.out.println(threadPrefix + "Turn: " + getTurn().turn);
-            System.out.println(threadPrefix + "Init Decision: " + getDecision(getTurn().turn));
+            System.out.println(threadPrefix + " Turn: " + getTurn().turn);
+            System.out.println(threadPrefix + " Init Decision: " + getDecision(getTurn().turn));
         }
 
         Game.Turn current = getTurn();
@@ -151,7 +157,6 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
         accum.clear();
 
         // setup tasks
-        long chargeDuration = duration;
         long chargeStop = System.currentTimeMillis() + chargeDuration;
         List<Callable<Void>> chargeTasks = Lists.newArrayList();
 
@@ -207,11 +212,16 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
 
         long actualChargerStop = System.currentTimeMillis();
 
+        if (!accumulate)
+            return;
+
+        long accumStop = actualChargerStop + accumDuration;
         // accumulate!
         accumForRoleState(chargersUse,
                 poolsUse,
                 state,
-                candidateActions);
+                candidateActions,
+                accumStop);
 //        long accumStop = actualChargerStop + accumDuration;
 //        try {
 //            chargeManager.invokeAll(Lists.newArrayList(
@@ -234,31 +244,19 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
         long actualAccumStop = System.currentTimeMillis();
 
         if (logLevel == Level.INFO) {
-            System.out.println(threadPrefix + " Fuzz: " + fuzz);
+            long timeLimit = getTurn().turn == 0 ? config.startclock : config.playclock;
             System.out.println(threadPrefix + " State: " + state);
-            System.out.println(threadPrefix + " Decision: " + getDecision(current.turn));
-            System.out.println(threadPrefix + " Total decision time: " + (actualAccumStop - startTime) + " ms to decide out of " + config.playclock);
-            System.out.println(threadPrefix + " Charger time: " + (actualChargerStop - startTime) + " ms");
-            System.out.println(threadPrefix + " Charger time allotted: " + chargeDuration);
-            System.out.println(threadPrefix + " Accum time: " + (actualAccumStop - actualChargerStop) + " ms");
+            System.out.println(threadPrefix + " Final Decision: " + getDecision(current.turn));
+            System.out.println(threadPrefix + " Total decision time: " + (actualAccumStop - startTime) +
+                    " ms out of " + timeLimit);
+            System.out.println(threadPrefix + " Charger time: " + (actualChargerStop - startTime) +
+                    " ms out of " + chargeDuration);
+            System.out.println(threadPrefix + " Accum time: " + (actualAccumStop - actualChargerStop) +
+                    " ms out of " + accumDuration);
+            System.out.println(threadPrefix + " Charges this turn: " + turnChargeCount);
             accum.printActionStats(role, state, candidateActions);
         }
         updateStats();
-
-//        // print out the selected move
-//        if (logLevel == Level.INFO) {
-//            Caches roleCache = accum.actionCaches.get(role);
-//            StateActionPair pair = new StateActionPair(state, selected);
-//            if (roleCache.explored(state, selected)) {
-//                System.out.println(tag + " [ Thread: " + Thread.currentThread().getId() + " Role " + role + "] picked move " + selected +
-//                        " with monte carlo goal score: " + roleCache.monteCarloScore(pair));
-//            }
-//            else
-//                System.out.println(tag + " [ Thread: " + Thread.currentThread().getId() + " Role " + role + "] no charges completed. picking random move.");
-//            System.out.println();
-//        }
-
-
         // POTENTIALLY PRUNE CACHES HERE
     }
 
@@ -269,8 +267,9 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
        return new Callable<Void>() {
            @Override
            public Void call() throws Exception {
+               Thread.currentThread().setPriority(Thread.MAX_PRIORITY - 2);
                while(System.currentTimeMillis() < stopTime) {
-                   chargeCount++;
+                   turnChargeCount++;
                    synchronized (charger) {
                            charger.fireAndReel(state, machine);
                    }
@@ -280,26 +279,26 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
        };
     }
 
-    // no time limit
+    // stop time
     public void accumForRoleState(List<Charger> chargersToAdd,
                                   List<Pool> poolsToAdd,
                                   Set<Dob> state,
-                                  List<Dob> actions ) {
-        synchronized (accum) {
-            for (int i=0; i<chargersToAdd.size(); i++) {
-                Charger toAdd = chargersToAdd.get(i);
-                Pool toAddPool = poolsToAdd.get(i);
-                Dob toAddRole = toAddPool.dobs.submerge(role);
-                Set<Dob> toAddState = Sets.newHashSet(toAddPool.dobs.submerge(state));
-                List<Dob> toAddActions = toAddPool.dobs.submerge(actions);
-                synchronized (toAdd) {
-                     Charger.accumForRoleState(accum,
-                            toAdd,
-                            accumPool,
-                            toAddRole,
-                            toAddState,
-                            toAddActions);
-                }
+                                  List<Dob> actions,
+                                  long stopTime) {
+        for (int i=0; i<chargersToAdd.size(); i++) {
+            Charger toAdd = chargersToAdd.get(i);
+            Pool toAddPool = poolsToAdd.get(i);
+            Dob toAddRole = toAddPool.dobs.submerge(role);
+            Set<Dob> toAddState = Sets.newHashSet(toAddPool.dobs.submerge(state));
+            List<Dob> toAddActions = toAddPool.dobs.submerge(actions);
+            synchronized (toAdd) {
+                 Charger.accumForRoleState(accum,
+                        toAdd,
+                        accumPool,
+                        stopTime,
+                        toAddRole,
+                        toAddState,
+                        toAddActions);
             }
         }
     }

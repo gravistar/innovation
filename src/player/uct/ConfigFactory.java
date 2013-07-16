@@ -41,6 +41,7 @@ public class ConfigFactory {
                 UCTStatics.fuzzRisky,
                 Level.INFO,
                 numThreads,
+                UCTStatics.accumShort,
                 level);
     }
 
@@ -55,6 +56,7 @@ public class ConfigFactory {
                 UCTStatics.fuzzRisky,
                 Level.INFO,
                 numThreads,
+                UCTStatics.accumShort,
                 level);
     }
 
@@ -69,9 +71,11 @@ public class ConfigFactory {
                 UCTStatics.fuzzRisky,
                 Level.INFO,
                 numThreads,
+                UCTStatics.accumShort,
                 level);
     }
 
+    // PRODUCTION CONFIG
     public static ConfigInterface fullKaskadeConfig(final List<Rule> rules,
                                                     final ExecutorService buildManager) {
         int numThreads = Runtime.getRuntime().availableProcessors();
@@ -80,9 +84,10 @@ public class ConfigFactory {
         return kaskadeConfig(rules,
                 buildManager,
                 tag,
-                UCTStatics.fuzzRisky,
+                UCTStatics.fuzzSafe,
                 Level.INFO,
                 numThreads,
+                UCTStatics.accumProduction,
                 level);
     }
 
@@ -117,6 +122,7 @@ public class ConfigFactory {
         return new Callable<Tuple2<PropNet, GameLogicContext>>() {
             @Override
             public Tuple2<PropNet, GameLogicContext> call() throws Exception {
+                Thread.currentThread().setPriority(Thread.MAX_PRIORITY - 1);
                 Tuple2<PropNet, GameLogicContext> ret = PropNetFactory.createFromRules(rules);
                 return ret;
             }
@@ -131,6 +137,7 @@ public class ConfigFactory {
                     @Override
                     public NativePropNetFactory.NativeParam call() throws Exception {
                         Tuple2<PropNet, GameLogicContext> vanillaNetOut = vanillaFuture.get();
+                        Thread.currentThread().setPriority(Thread.MAX_PRIORITY - 1);
                         // gross
                         PropNet vanilla = vanillaNetOut._1;
                         NativePropNetFactory.NativeParam nativeParams = NativePropNetFactory.compile(vanilla);
@@ -236,6 +243,7 @@ public class ConfigFactory {
                                                 final int fuzz,
                                                 final Level logLevel,
                                                 final int numThreads,
+                                                final int accumDuration,
                                                 final KaskadeLevel kaskadeLevel) {
 
         // create the main
@@ -249,7 +257,6 @@ public class ConfigFactory {
 
         // BUILD THE STUFF!!
         if (kaskadeLevel.id >= KaskadeLevel.PROVER.id) {
-            System.out.println("ADDING PROVERS");
             // create provers
             for (int i=0; i<numThreads; i++) {
                 final BackwardStateMachine machineCharger = BackwardStateMachine.createForRules(rules);
@@ -347,6 +354,11 @@ public class ConfigFactory {
             @Override
             public int numThreads() {
                 return numThreads;
+            }
+
+            @Override
+            public int getAccumDuration() {
+                return accumDuration;
             }
 
             @Override

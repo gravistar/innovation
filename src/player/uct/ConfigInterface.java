@@ -26,6 +26,7 @@ public interface ConfigInterface {
     public int getFuzz();                                   // fuzz threshold (ms)
     public int numThreads();
     public Level getLoggingLevel();
+    public int getAccumDuration();
 
     // Depth charger components
     public List<Future<GgpStateMachine>> createChargeMachines(); // async

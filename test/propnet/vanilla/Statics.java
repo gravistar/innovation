@@ -1,5 +1,6 @@
 package propnet.vanilla;
 
+import com.google.common.collect.Lists;
 import com.google.common.collect.Sets;
 import rekkura.logic.model.Rule;
 import rekkura.test.ggp.SimpleGames;
@@ -31,6 +32,13 @@ public class Statics {
         "knightstour.kif",           // propnettable but hangs
         "tictacheavenfc.kif",        // BAD KIF (no bases)
         "ttcc4.kif"                  // propnettable
+    );
+
+    public static final List<String> large = Lists.newArrayList(
+            "pilgrimage.kif",
+            "firesheep.kif",
+            "platformjumpers.kif"
+            // "chinook.kif" // too beastly
     );
 
     // following just hang randomly

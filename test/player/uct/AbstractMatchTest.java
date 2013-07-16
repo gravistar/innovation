@@ -60,11 +60,4 @@ public abstract class AbstractMatchTest {
         generalMatchTest( Lists.newArrayList(TestUtil.PlayerType.UCTPropNetNativeFullThreaded,
                 TestUtil.PlayerType.Legal) );
     }
-//
-//    @Test
-//    public void UCTPropNetNativeThreaded() {
-//        generalMatchTest( Lists.newArrayList(TestUtil.PlayerType.UCTPropNetNativeThreaded,
-//                TestUtil.PlayerType.Legal) );
-//    }
-
 }
