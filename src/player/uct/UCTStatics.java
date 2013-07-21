@@ -27,7 +27,7 @@ public class UCTStatics {
 
     // accum levels
     public static int accumShort = 100;
-    public static int accumProduction = 200; // should not take long
+    public static int accumProduction = 1500; // account for garbage collection
 
     // thread priority
     public static enum ThreadPriority{

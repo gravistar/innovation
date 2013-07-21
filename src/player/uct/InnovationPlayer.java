@@ -1,9 +1,12 @@
 package player.uct;
 
 import propnet.nativecode.NativeUtil;
+import rekkura.ggp.milleu.Game;
+import rekkura.logic.model.Dob;
 import rekkura.logic.model.Rule;
 
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.logging.Level;
@@ -34,7 +37,12 @@ public class InnovationPlayer extends UCTPlayer{
         // shutdown builds if they're still going
         buildManager.shutdownNow();
 
+        // print out goals
+        Set<Dob> state = getTurn().state;
+        System.out.println ("=== END GAME GOALS === ");
+        System.out.println(machine.getGoals(state));
+
         // cleanup!
-        // NativeUtil.deleteGeneratedFiles();
+        NativeUtil.deleteGeneratedFiles();
     }
 }

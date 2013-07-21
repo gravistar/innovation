@@ -309,7 +309,6 @@ public class ConfigFactory {
             }
         }
 
-
         // make the actual config
         return new ConfigInterface() {
             @Override

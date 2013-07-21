@@ -227,6 +227,7 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
                     " ms out of " + accumDuration);
             System.out.println(threadPrefix + " Charges this turn: " + turnChargeCount);
             accum.printActionStats(role, state, candidateActions);
+            printCacheSizes(chargersUse, threadPrefix);
         }
         // POTENTIALLY PRUNE CACHES HERE
     }
@@ -248,6 +249,21 @@ public abstract class UCTPlayer extends Player.StateBased<GgpStateMachine> {
                return null;
            }
        };
+    }
+
+    public void printCacheSizes(List<Charger> chargers, String threadPrefix) {
+        int totalSize = 0;
+        for (Charger charger : chargers) {
+            synchronized (charger) {
+                totalSize += charger.sharedStateCache.size();
+                for (Dob role : charger.actionCaches.keySet()) {
+                    Caches cache = charger.actionCaches.get(role);
+                    totalSize += cache.goalScoreTotal.size();
+                    totalSize += cache.timesTaken.size();
+                }
+            }
+        }
+        System.out.println(threadPrefix + " Total cache entries: " + totalSize);
     }
 
     // stop time

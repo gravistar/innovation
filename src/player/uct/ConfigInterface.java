@@ -31,7 +31,8 @@ public interface ConfigInterface {
     // Depth charger components
     public List<Future<GgpStateMachine>> createChargeMachines(); // async
     public List<Charger> createChargers();                       // never async
-    public List<Pool> createChargePools();                       // pools associated with each charge machine
+    public List<Pool> createChargePools();                       // never async.
+                                                                 // pools associated with each charge machine
 
     // Master components
     public GgpStateMachine createMainMachine();             // used for this.machine

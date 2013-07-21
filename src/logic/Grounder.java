@@ -25,7 +25,6 @@ import java.util.Set;
  *      For a set of rules, generates all the valid groundings. Makes sure to cache them in the
  *      pool and the cachet.
  *
- *      This really doesn't belong in the propnet dir.
  */
 public class Grounder {
 
@@ -175,7 +174,6 @@ public class Grounder {
     /**
      * Returns the submerged version if there is one. Otherwise, submerges the dob
      * and returns it.
-     * Also adds it to the known set.
      *
      * @param dob
      * @param pool
@@ -188,6 +186,14 @@ public class Grounder {
         return submerged;
     }
 
+    /**
+     * Same as <code>getSubmergedGround</code> except with the side effect of
+     * @param dob
+     * @param known
+     * @param pool
+     * @param cachet
+     * @return
+     */
     public static Dob submergeAndAddKnown(Dob dob, Set<Dob> known, Pool pool, Cachet cachet) {
         Dob submerged = getSubmergedGround(dob, pool, cachet);
         known.add(submerged);
@@ -254,6 +260,41 @@ public class Grounder {
         return ret;
     }
 
+
+    /**
+     * @param ungrounded
+     * @param unify
+     * @return
+     *      Set of dobs which correspond to the power set of unify applied to ungrounded.
+     *      For instance if unify = {?X = x, ?Y = y} and ungrounded = (?X,?Y), then
+     *      this returns {(?X,?Y),(x,?Y),(?X,y),(x,y)}
+     */
+    public static Set<Dob> generatePowerSetAssignment(Dob ungrounded, Map<Dob,Dob> unify){
+        Preconditions.checkNotNull("unification null!", unify);
+        Set<Dob> ret = Sets.newHashSet();
+        // gather the vars
+        List<Dob> varList = Lists.newArrayList();
+        for (Dob var : unify.keySet())
+            if (var.name.startsWith("?"))
+                varList.add(var);
+
+        int nVar = varList.size();
+        for (int varSet=0; varSet<(1<<nVar); varSet++) {
+            Map<Dob,Dob> subunify = Maps.newHashMap();
+            for (int i=0; i<nVar; i++) {
+                if (((1<<i) & varSet) > 0) {
+                    Dob key = varList.get(i);
+                    Dob val = unify.get(key);
+                    subunify.put(key, val);
+                }
+            }
+
+            Dob assigned = Unifier.replace(ungrounded, subunify);
+            ret.add(assigned);
+        }
+        return ret;
+    }
+
     public static List<Dob> posBodies(Rule rule) {
         List<Dob> ret = Lists.newArrayList();
         for (Atom body : Atom.filterPositives(rule.body))
@@ -262,7 +303,6 @@ public class Grounder {
     }
 
 
-    // fuck forgot to handle the one variable case
     public static boolean validDistinct(Map<Dob,Dob> unify, Rule rule, Collection<Dob> vars) {
         List<Rule.Distinct> distinct = rule.distinct;
         if (distinct.size() == 0)
